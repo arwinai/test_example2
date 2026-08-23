@@ -1,0 +1,183 @@
+schema_version = "1.4"
+
+[task]
+name = "storygold/solidworks-0009-mouse-wheel"
+version = "1.0.0"
+description = "Modify mouse model in order to make the shape more accessible"
+keywords = ["solidworks", "cad", "design_iteration"]
+
+[[task.authors]]
+name = "StoryGold"
+
+[metadata]
+complete = true
+program = "SolidWorks"
+category = "design_iteration"
+units = "mm"
+human_baseline_minutes = 180
+max_score = 5
+
+output_modality = "cad"
+accepted_output_formats = ["sldprt"]
+reference = ["solution/solution.SLDPRT"]
+notes = ""
+
+[metadata.harness]
+entrypoint = "harness/harness.py"
+timeout_s = 600.0
+requires_solidworks = true
+requires_freecad = false
+requires_llm = false
+
+[[metadata.inputs]]
+path = "tests/task/prompt/input.json"
+format = "json"
+role = "baseline_measurements"
+
+[[metadata.scoring_components]]
+name = "model regenerates"
+weight = 0
+
+[[metadata.scoring_components]]
+name = "no broken features"
+weight = 0
+
+[[metadata.scoring_components]]
+name = "four snap tabs present"
+weight = 1
+
+[[metadata.scoring_components]]
+name = "two thumb buttons added"
+weight = 1
+
+[[metadata.scoring_components]]
+name = "lengthened to 105 mm"
+weight = 1
+
+[[metadata.scoring_components]]
+name = "wheel radius up 10 percent"
+weight = 1
+
+[[metadata.scoring_components]]
+name = "slot accommodates wheel"
+weight = 1
+
+[[metadata.scoring_components]]
+name = "clean rebuild"
+weight = 0
+
+[metadata.examples]
+"examples/adversarial_elliptical_wheel.SLDPRT" = "elliptical wheel instead of round"
+"examples/adversarial_feature_tree_errors.SLDPRT" = "feature tree riddled with rebuild errors"
+"examples/adversarial_mid_spacer_band.SLDPRT" = "spacer band added at the mid seam"
+"examples/adversarial_slot_widened_past_the_wheel.SLDPRT" = "slot widened past the wheel"
+"examples/adversarial_snap_tabs_off_the_seam.SLDPRT" = "snap tabs off the seam"
+"examples/adversarial_tabs_unpaired_across_the_seam.SLDPRT" = "tabs unpaired across the seam"
+"examples/adversarial_thumb_buttons_incorrectly_placed.SLDPRT" = "thumb buttons incorrectly placed"
+
+[[metadata.assets]]
+path = "environment"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/9_mouse_wheel/environment"
+sha256 = "d2c68093cf65614082bcc386f13231e084d969d631033a09f5a56333f1696303"
+bytes = 3491706
+files = 1
+manifest = [
+  ["input.SLDPRT", "e226dd063df80aa5bf70526824c1e85cf7c27e97a42aa6e7be1741bce0e99c93", 3491706],
+]
+
+[[metadata.assets]]
+path = "solution"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/9_mouse_wheel/solution"
+sha256 = "777c34bc0863725351a5b3d08e2305da321273a5500f273aa80e065bb4077bf3"
+bytes = 8060952
+files = 2
+manifest = [
+  ["solution.SLDPRT", "97e81b413321b2398e3cf742c726427d1fd6d72e760279baa70bbe0c25af3990", 4219790],
+  ["solution.STEP", "2a7f7658e16bdf92284ffac70a0cc5cbf3cb90959bd527db9766b7770766aa19", 3841162],
+]
+
+[[metadata.assets]]
+path = "examples/adversarial_elliptical_wheel.SLDPRT"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/9_mouse_wheel/examples/adversarial_elliptical_wheel.SLDPRT"
+sha256 = "f9e5c17ce6f223b258ea31127e04636be0fc580c6ac6af52683e5f4a45891bb5"
+bytes = 4490299
+
+[[metadata.assets]]
+path = "examples/adversarial_feature_tree_errors.SLDPRT"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/9_mouse_wheel/examples/adversarial_feature_tree_errors.SLDPRT"
+sha256 = "4c0fe14b6097ca0ffa8943548e538fd3ce824e40617302b7be65f38ae2aac4a8"
+bytes = 3470397
+
+[[metadata.assets]]
+path = "examples/adversarial_mid_spacer_band.SLDPRT"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/9_mouse_wheel/examples/adversarial_mid_spacer_band.SLDPRT"
+sha256 = "463053c9a1f9c9e77e1f142bed56bf795268b341c3b200af8ccdd48003c98357"
+bytes = 4931251
+
+[[metadata.assets]]
+path = "examples/adversarial_slot_widened_past_the_wheel.SLDPRT"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/9_mouse_wheel/examples/adversarial_slot_widened_past_the_wheel.SLDPRT"
+sha256 = "c76fb55a6bd56910d14b456aa8df4de0dd47d363b151871eb9c2eeb5848008d6"
+bytes = 4497408
+
+[[metadata.assets]]
+path = "examples/adversarial_snap_tabs_off_the_seam.SLDPRT"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/9_mouse_wheel/examples/adversarial_snap_tabs_off_the_seam.SLDPRT"
+sha256 = "15f895c3d338427b0536d8492a21e23320d3b27b04989942e30cc630758fd44d"
+bytes = 4268135
+
+[[metadata.assets]]
+path = "examples/adversarial_tabs_unpaired_across_the_seam.SLDPRT"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/9_mouse_wheel/examples/adversarial_tabs_unpaired_across_the_seam.SLDPRT"
+sha256 = "2c3379f3c813e7bf94a667de229ce443c975644456130a06918778b615ea1151"
+bytes = 4359024
+
+[[metadata.assets]]
+path = "examples/adversarial_thumb_buttons_incorrectly_placed.SLDPRT"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/9_mouse_wheel/examples/adversarial_thumb_buttons_incorrectly_placed.SLDPRT"
+sha256 = "1e1461f190fa689b11afc6dc56628741edbeea227c6fbb86556bb233fe507dbf"
+bytes = 4591413
+
+[[metadata.assets]]
+path = "examples/solution.SLDPRT"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/9_mouse_wheel/examples/solution.SLDPRT"
+sha256 = "97e81b413321b2398e3cf742c726427d1fd6d72e760279baa70bbe0c25af3990"
+bytes = 4219790
+
+[[metadata.assets]]
+path = "tests/task/prompt/input.SLDPRT"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/9_mouse_wheel/tests/task/prompt/input.SLDPRT"
+sha256 = "e226dd063df80aa5bf70526824c1e85cf7c27e97a42aa6e7be1741bce0e99c93"
+bytes = 3491706
+
+[verifier]
+# TODO: verifier.environment_mode -- the harness grades whatever SolidWorks
+# document is currently open via COM (pywin32), not a file handed to a
+# headless verifier process. Decide once the real Windows+SolidWorks
+# environment exists whether verification runs "shared" with the agent's
+# live SolidWorks session or some other arrangement Harbor doesn't
+# currently model for GUI apps.
+timeout_sec = 1500.0
+
+[verifier.env]
+
+[agent]
+timeout_sec = 1500.0
+# TODO: user -- which Windows user account the agent (and SolidWorks) run
+# as. Depends on how SolidWorks licensing/activation is set up on the
+# target machine.
+
+[environment]
+os = "windows"
+network_mode = "public"
+build_timeout_sec = 1500.0
+# TODO: cpus / memory / storage -- SolidWorks' real resource needs on the
+# target Windows host aren't known from here.
+
+[environment.env]
+# TODO: FREECAD-style env var isn't applicable; SolidWorks is driven via
+# COM (win32com.client.Dispatch("SldWorks.Application")), which needs a
+# running, licensed SolidWorks process -- not an env var pointing at a
+# binary.
+
+[solution.env]

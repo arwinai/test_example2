@@ -1,0 +1,686 @@
+schema_version = "1.4"
+
+[task]
+name = "storygold/solidworks-0016-nanoindenter-stage"
+version = "1.0.0"
+description = "Cross-functional change requests for an in-situ tension/compression test stage"
+keywords = ["solidworks", "cad", "design_iteration"]
+
+[[task.authors]]
+name = "StoryGold"
+
+[metadata]
+complete = true
+program = "SolidWorks"
+category = "design_iteration"
+units = "mm"
+human_baseline_minutes = 180
+output_modality = "cad"
+notes = "harness.py grades a live SolidWorks session over COM, measuring named components directly (Belt Guard, Fixture, GT2 belt, the GPA40GT2060-B-H6.35/H8 pulley subassemblies). File-identity fix: the real, fully-populated stage assembly in this task family was misnamed 'YSZ clamp.SLDASM' (with an abandoned 2-part 'Main.SLDASM' stub mistakenly registered as the primary input/reference, and copied under that same stub content into every examples/adversarial_* folder's 'adversarial_*.SLDASM' file) -- environment/, solution/, and all 8 examples/adversarial_* folders have been renamed to the standard input.SLDASM / solution.SLDASM / adversarial_*.SLDASM convention. KNOWN GAP, confirmed live: solution/solution.SLDASM's own 'Belt Guard-1' component carries a genuine hard rebuild error (not a stale-error-code artifact -- confirmed via GetErrorCode2's warning/error distinction after a forced rebuild), so the reference solution itself currently fails the 'model rebuilds without errors' must-pass gate; every other check passes on it. NOT machine-graded (see harness.py's docstring): bolt/part collision avoidance for the belt cover, tool-free attach/detach without disassembly, milling-specific manufacturability features, and mounting-hole relocation on the enclosure body (coordinate-frame limitation, not attempted)."
+accepted_output_formats = ["sldasm"]
+reference = ["solution/solution.SLDASM"]
+max_score = 10
+
+[[metadata.scoring_components]]
+name = "model rebuilds without errors"
+weight = 0
+
+[[metadata.scoring_components]]
+name = "belt cover covers both pulleys and the belt (incl. new pulley size)"
+weight = 1
+
+[[metadata.scoring_components]]
+name = "belt cover has mounting fasteners"
+weight = 1
+
+[[metadata.scoring_components]]
+name = "belt cover is sheet-metal manufacturable"
+weight = 1
+
+[[metadata.scoring_components]]
+name = "side plate removed"
+weight = 1
+
+[[metadata.scoring_components]]
+name = "fixture plate lengthened for t-slot mounting"
+weight = 1
+
+[[metadata.scoring_components]]
+name = "fixture plate has new M8 mounting holes or slots"
+weight = 1
+
+[[metadata.scoring_components]]
+name = "motor shaft pulley changed to 60T (larger diameter)"
+weight = 1
+
+[[metadata.scoring_components]]
+name = "pulley thickness and bore diameter unchanged"
+weight = 1
+
+[[metadata.scoring_components]]
+name = "pulley cover (flange) resized to fit the new pulley"
+weight = 1
+
+[[metadata.scoring_components]]
+name = "timing belt adjusted to the new pulley layout"
+weight = 1
+
+[metadata.harness]
+entrypoint = "harness/harness.py"
+timeout_s = 300.0
+requires_solidworks = true
+requires_freecad = false
+requires_llm = false
+
+[[metadata.inputs]]
+path = "environment/input.SLDASM"
+format = "sldasm"
+role = "primary"
+
+[[metadata.inputs]]
+path = "environment/input.png"
+format = "png"
+role = "reference_image"
+
+[metadata.examples]
+"examples/adversarial_guard_leaves_belt_exposed/adversarial_guard_leaves_belt_exposed.SLDASM" = "guard leaves part of the belt run exposed"
+"examples/adversarial_tall_boxy_guard_not_low_profile/adversarial_tall_boxy_guard_not_low_profile.SLDASM" = "tall boxy guard, not low-profile"
+"examples/adversarial_guard_removal_requires_partial_disassembly/adversarial_guard_removal_requires_partial_disassembly.SLDASM" = "guard removal requires partial disassembly"
+"examples/adversarial_fixture_plate_extended_but_side_plate_remains/adversarial_fixture_plate_extended_but_side_plate_remains.SLDASM" = "fixture plate extended but side plate remains"
+"examples/adversarial_m6_mounting_holes_instead_of_m8/adversarial_m6_mounting_holes_instead_of_m8.SLDASM" = "M6 mounting holes instead of M8"
+"examples/adversarial_48t_pulley_substituted_for_60t/adversarial_48t_pulley_substituted_for_60t.SLDASM" = "48T pulley substituted for the 60T"
+"examples/adversarial_60t_pulley_fitted_to_wrong_shaft/adversarial_60t_pulley_fitted_to_wrong_shaft.SLDASM" = "60T pulley fitted to the wrong shaft"
+"examples/adversarial_feature_tree_rebuild_errors_dangling_references/adversarial_feature_tree_rebuild_errors_dangling_references.SLDASM" = "feature tree riddled with rebuild errors and dangling references"
+
+[[metadata.assets]]
+path = "environment"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/16_nanoindenter_stage/environment"
+sha256 = "e2fd2ab97c88fe9c390c6b3b48e836a008e78a7da3fb2681b013f1a77560f18b"
+bytes = 104026147
+files = 45
+manifest = [
+  ["3564N14_Carbon Steel Bearing Retaining Nut.SLDPRT", "ab6f755fb509988a150b4c9aec9a58ddb3f9c48c4d6166e20053f4b52a390fb0", 385516],
+  ["6627T116_Stepper Motor.SLDPRT", "2931109be94c1555e3f6eae71240d6db04972b448cbf1b83c1ea505cec358d2b", 23380981],
+  ["96445K157_Belleville Disc Spring.SLDPRT", "7f5d81a0737d20c8492c4757f8bdd1594f582b6318191442334db7166f3106f0", 146472],
+  ["9731N39_Clamping Two-Piece Shaft Collar.SLDPRT", "35ad51228114b0abf967c1af95d8bdd4db5a22c26428b66c12a13430a3b8f614", 1374117],
+  ["Amazon NEMA23 support.SLDPRT", "0e4de88a70814610615639eebbff0ceeb9c8313c842b233fae5706dfd53cb352", 116115],
+  ["Amazon Shaft collar.SLDPRT", "4068c29a11ad35a03b6cb8614799f4752c616d5cdba9a65b850eda667fa29d35", 139323],
+  ["BGBK608DD-20.sldasm", "c24e66c3e8297327e14157cd2fe30499b346c5942f4222e83474eef1b16517c9", 136868],
+  ["BGBK608DD-20_h.sldprt", "bef724a9919fce2f7561a195520de7b39e22dff7a45540d76e7affc5f9e3bb63", 33713],
+  ["BGHFS608DD-35.SLDASM", "2366034e69bc47c61231a1aa6f6d0c0f7bd0f7893f80e45651a0fb31b5e39a05", 95357],
+  ["BGHFS608DD-35_h.sldprt", "096f24cde8920e2cede8905b94b438a5f2ab2960e8b6a35d57d8387c6e6e0f03", 36802],
+  ["Brass separator.SLDPRT", "ddb2993d91a034199c9d9e2276be6d58bdfddb9bd9eea37fa65953e122ff9d9f", 85415],
+  ["Bridge-type transducer.SLDPRT", "bbf582896169b024412a2e1765a483961e5eba8bba59846d50478054e9893207", 359378],
+  ["CS stack.SLDASM", "4e90bb0ed58d9e4b6f7ac69dd950e43d6f829e7384507f77077326aad185303c", 134847],
+  ["Compression clamp V1.02.SLDPRT", "ca3b389050ab7dd098488a3b544bbdc962bfddcf7ed7a9457c74748fc0ca2b8b", 129429],
+  ["Custom Fine Thread lead screw nut.SLDPRT", "e4376a3af6de80576e63a1d51b73214b53dd5e65dfb8063b571a9264b74ae055", 2074595],
+  ["Custom fine thread mirrored lead screw.SLDPRT", "cd300b483719af93161084153c8cf46488b43db555990fbeafd9fc46e34c2486", 4051560],
+  ["Custom input worm gear_merge.SLDPRT", "8b20a721cf80ba2bb0b713b485e27f045954eae968d877c23d68bd5f9866cd54", 5858318],
+  ["Custom input worm.SLDPRT", "e82613bd4e1c41c25c548ed428f564be42afaca9bab633a070450e4ed6dd9e58", 1074573],
+  ["Custom output worm gear.SLDPRT", "f335629c4a87b51b3f08f167fba0609a9644d9e49c42951f3817634d3351aa50", 3541748],
+  ["Custom worm_merge.SLDPRT", "cfececaffafca1f5d9b45b4582a9d0dfdb5e3a109a2c7ecea2c6143802edffab", 1851502],
+  ["FLANGE_GPA40GT2060-B-H6.35.SLDPRT", "3a33ea0a496445b0f38ed854ca75d5786bea8d4272cdfb2ed2bc318074ad75fb", 88455],
+  ["FLANGE_GPA40GT2060-B-H8.SLDPRT", "447eb1352f573af6360ac65d3ebb8ecfdb4e7251044801f2b5b0f5132d8ee5a4", 88675],
+  ["GPA40GT2060-B-H6.35.SLDASM", "34fba96429354c5516c6f95f77865530f7542337681a8963ff9b1d1c9a69bc5f", 202480],
+  ["GPA40GT2060-B-H8.SLDASM", "be88cd91be7651291d26d9eee67a8d143b9e21f741405af7ad6b353a99d5f117", 201816],
+  ["Main.SLDASM", "6d8cfdc768565f09d5ed2ca8ddea31972e96a0e9807cae2a1474a61b028f482d", 122091],
+  ["Movable support.SLDPRT", "685838794015a43c5b067755a1542c5ec0ea75a9e75f49be4f3053dfe52955bc", 197208],
+  ["RRING-C-INT-22.sldprt", "74ac6292dbc4a7ebb0d47331e45a8897d0a872ffeaf768f413ef52aa736a35e1", 34136],
+  ["Revolver type transducer.SLDPRT", "cdf48ffe931ba60b542e41f1df0a125f0826d8e1b94bf42a4186ccd584079ef7", 79607],
+  ["SSM series load cell.SLDPRT", "7d846c749a6345ac73f4ebbfa79f4ab1d4f4657ea20a878594f565a586b5fba8", 183440],
+  ["Slide plate.SLDPRT", "67279bb11fc27826aa2aad0713352c988bba667b404a3ae960e51462dfc1b556", 203439],
+  ["TIMING PULLEY_GPA40GT2060-B-H6.35.SLDPRT", "db29052c52a24dce81f6cf00cda485cc648e321570f3be2518e311148158e1ea", 429418],
+  ["TIMING PULLEY_GPA40GT2060-B-H8.SLDPRT", "c9b085e1dee2499058e7159e3198cabf363d5068551c2a8c8fd12554d7205bac", 429744],
+  ["Threaded shaft collar.SLDPRT", "7f87e6519b5d4bc1583cbddf57bdb401e6d7bd3c3ec0b7be6453b5c9f82d151d", 536023],
+  ["Working volume.SLDPRT", "8089e543c7e5acaa7ebe10af9a7e3f047d9892d5d795086b97d0d5b2e2013dfe", 52419],
+  ["YSZ clamp.SLDASM", "8d999a88598ae697d09e7763fe099c4aa125c3966bd92c7fff861866bae20b08", 26227939],
+  ["Yttria stabilized zirconia sample.SLDPRT", "d418138bac7bf3e80dbe9aad33e9c33dae5bfb2644bcd6374da74d67004cbb75", 50489],
+  ["bearing_608.sldprt", "8ab74cbaa4ccbd7f359480b50f307f3917f3ea0f404caa2b29e23e370e2d2c81", 31664],
+  ["flat washer narrow_am.sldprt", "73ad1c98284c440209931137ab6b3bb0dd950ee4ec309708f0abb3043e7cd63b", 143848],
+  ["input.SLDASM", "8d999a88598ae697d09e7763fe099c4aa125c3966bd92c7fff861866bae20b08", 26227939],
+  ["prevailing torque hex nut_am.sldprt", "7e0e864f33c168b26473b90ff298c822b537b17a5d7b9af463b9b925b7cbcbc9", 383784],
+  ["socket head cap screw_ai.sldprt", "7f02d896e69dde4cbc955703e3cd0b1857c429088f4de9dbfc8c1887c073f5d5", 510808],
+  ["socket head cap screw_am.sldprt", "6a4f24ae675c247e80ed3d403e7af82f4521806d2de64ea27a4af1d06a15392f", 1627875],
+  ["socket set screw cone point_am.sldprt", "a44270c1efa51349fecf4a252e0da7a879547f13bf0ef11ef8acb1991c81128e", 376573],
+  ["socket set screw cup point_am.sldprt", "cf5d3323c9b3956981aaee06bf25ba9f29d6f540c7f6d5907ac4acbd930b6359", 355755],
+  ["socket set screw flat point_am.sldprt", "d37272816277c2a662f6316da9910437753bfbb3df75b346d8218686cc0471b5", 233893],
+]
+
+[[metadata.assets]]
+path = "solution"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/16_nanoindenter_stage/solution"
+sha256 = "e16b0f145e890077daa22318ba95eb93e34284096c89c69e714c253a238e42e2"
+bytes = 105991556
+files = 50
+manifest = [
+  ["3564N14_Carbon Steel Bearing Retaining Nut.SLDPRT", "f4bff01cee053330692705bfa19000a0b10c2c0eda3fd03498b101b091b0ee73", 389199],
+  ["6627T116_Stepper Motor.SLDPRT", "5e9714618f2ac3b04326b31ae4a50f0c036d5c401687f63b1e13bb0f27eb3468", 22883629],
+  ["91292A111_18-8 Stainless Steel Socket Head Screw.SLDPRT", "067f7614762035637fd7f19e4f310283b1ce493e243d73cccc79dcd8dc832ee2", 626983],
+  ["96445K157_Belleville Disc Spring.SLDPRT", "4306cefaac5d8cb43f26f0ea25747a079718d9fbbe0dba3a4fbd40776c75a1cd", 147994],
+  ["9731N39_Clamping Two-Piece Shaft Collar.SLDPRT", "719d18f502e64b4e132eb0214f15602f90d1caea3cd58df3b9d3d5008a7a7ddc", 1375386],
+  ["Amazon NEMA23 support.SLDPRT", "6d1f1d9c96bc3cc84ed11aac791750769b28ce40a0bcf60db033226b01b8e58d", 117055],
+  ["Amazon Shaft collar.SLDPRT", "417cbb0963105b80f43ab48a49cdc8913a69d2f426a2f85e9727a7886a8a8cbd", 91056],
+  ["BGBK608DD-20.sldasm", "f6dc92a6fb5c19831bcd2f0b06b83ff9d8524a9c4ff151644146d41af5a3380b", 138384],
+  ["BGBK608DD-20_h.sldprt", "83b0b2815b028eaac15d3d00634b7d246faf1df82ab22f105b95ede850d5471f", 35121],
+  ["BGHFS608DD-35.SLDASM", "d84d4cbadce47bdd67f965f6ea3d18e93ab180cda7a9d3970f4d777195297ce5", 97041],
+  ["BGHFS608DD-35_h.sldprt", "32a73c68aedf81b395631e06629dee72ae720b53eaf841d111f310ad2cce309e", 38559],
+  ["Belt Guard.SLDPRT", "1531d305dc7a7857feb1c9b0d8817dde588830443d455c164baf692a0b95fed8", 250130],
+  ["Belt Guard_Independent.SLDPRT", "0a43f5ab33fc4cb3badcf1e9b6e7f8323b13b691f4f5a70b7112a083cdd4f125", 255721],
+  ["Brass separator.SLDPRT", "c462d72b3b2d4080ff14b1704f0c0b883c481d0a482e5ca291eabcc8b9a9b37e", 87093],
+  ["Bridge-type transducer.SLDPRT", "bbf582896169b024412a2e1765a483961e5eba8bba59846d50478054e9893207", 359378],
+  ["CS stack.SLDASM", "5b24daf6796ee211b1ce11749c5511d870c7129be05ee5e8faf2296179cfdab6", 136163],
+  ["Compression clamp V1.02.SLDPRT", "32084766b3a64ecb6fe58b4ea631e9f4691f162be8e3f4decfcf4aa8b08ce67c", 131211],
+  ["Custom Fine Thread lead screw nut.SLDPRT", "aa31e4dc824015b1cea70b70ab58434a9d2ee3357b051a202f229f335791955f", 2086557],
+  ["Custom fine thread mirrored lead screw.SLDPRT", "5cc5a7d21438cd9cda6160cdcf3ba99630edc7e8dc9806c645e6a96ee908a27e", 4053668],
+  ["Custom input worm gear_merge.SLDPRT", "eee4a9edaf7ea0cf1580e6d0abc53621354829b858acd6e75064996ce9d0c509", 5863874],
+  ["Custom input worm.SLDPRT", "13fecb3dd66fdedddd12ff51cb67e345b7ff09806875eb20f068b8369bd75a55", 1078036],
+  ["Custom output worm gear.SLDPRT", "62e572a675de87a5fd871e1015c122bdda731c8773bdbe786ab993b6607d83db", 3588463],
+  ["Custom worm_merge.SLDPRT", "cfececaffafca1f5d9b45b4582a9d0dfdb5e3a109a2c7ecea2c6143802edffab", 1851502],
+  ["FLANGE_GPA40GT2060-B-H6.35.SLDPRT", "d2b1f96031748ce2132d5ec1a43952562e70b9c0b180e4b0b11d0b83b1ffb0c6", 90408],
+  ["FLANGE_GPA40GT2060-B-H8.SLDPRT", "025c8842c5b6e73c8d98171128fd2e6b6eb93e73556d0dd6268c7d7fa0171a42", 89736],
+  ["Fixture.SLDPRT", "cc3308552185142fde0814b1be40d389e6768336315b59c58fd75c2dda2723a8", 405531],
+  ["GPA40GT2060-B-H6.35.SLDASM", "f9a248a06172ab45f07037222245bf86fbb1ffe67b7af68a219f025958b9eb8a", 262197],
+  ["GPA40GT2060-B-H8.SLDASM", "d5cb9ea3a8fb9b23a0aea204d3582bc0da7096c1a8d0255efdb1ffac83324dbf", 204139],
+  ["GT2 belt.SLDPRT", "0bbf7c1706ab52177c270eb4b4ec5698c4b56ecde5585347ba1c7ebd4ba38a5a", 40505],
+  ["Main.SLDASM", "4b4943d625b19ea7d6b7e88bed11055ef5b6a33bd7c270aa6a4f3a0474c457ed", 124331],
+  ["Movable support.SLDPRT", "47aa05636126a6fc9f9fb5ffa35ead35fd19146523f9bad7ead25175e31b4277", 199431],
+  ["RRING-C-INT-22.sldprt", "32578e12d54393ab3a335a1dfe9764b2362b1d7e007a0fc059f1da7a2bfbf8ba", 36569],
+  ["Revolver type transducer.SLDPRT", "cdf48ffe931ba60b542e41f1df0a125f0826d8e1b94bf42a4186ccd584079ef7", 79607],
+  ["SSM series load cell.SLDPRT", "7d086b35923b442d491503b618cc6522da61a812b9db04cdbb7d24fa5aa5bdb6", 187729],
+  ["Slide plate.SLDPRT", "0aa3a44769d3ec7e13ef2df008912018aae10ffec51e44a96a16481c00082388", 204127],
+  ["TIMING PULLEY_GPA40GT2060-B-H6.35.SLDPRT", "deb4e77e30cffb2f14a017e370a66a26e8abb7a9ba2a02dead50b92662ff2694", 470336],
+  ["TIMING PULLEY_GPA40GT2060-B-H8.SLDPRT", "de15173a84dfd59c98d12c329e3c66e980877f84bcace18269a32cde55147c91", 403137],
+  ["Threaded shaft collar.SLDPRT", "16d67cc9d5c1c8f1da224ba9caf3dfe5d2856ac30b2cdcbe721f71cc3483310a", 540749],
+  ["Working volume.SLDPRT", "2b9a029892d4a7bcd2d75113451d852e3a2ac0958b12f33780f5cc9c9e81ee40", 54333],
+  ["YSZ clamp.SLDASM", "c31b05c2c6101e881e13311c2de159947daa6149408786d2a9c25e2d169d4ffe", 26599081],
+  ["Yttria stabilized zirconia sample.SLDPRT", "63cd3494c7a6f1e1f8aa34cfb9d8f849e2695f8ee6293ee36c0285eca8ec5433", 52266],
+  ["bearing_608.sldprt", "39e3b55e9fa5839dc9d2031e71d557622e2ba99c5150cdee868709d00966997e", 33524],
+  ["flat washer narrow_am.sldprt", "73ad1c98284c440209931137ab6b3bb0dd950ee4ec309708f0abb3043e7cd63b", 143848],
+  ["prevailing torque hex nut_am.sldprt", "7e0e864f33c168b26473b90ff298c822b537b17a5d7b9af463b9b925b7cbcbc9", 383784],
+  ["socket head cap screw_ai.sldprt", "7f02d896e69dde4cbc955703e3cd0b1857c429088f4de9dbfc8c1887c073f5d5", 510808],
+  ["socket head cap screw_am.sldprt", "6a4f24ae675c247e80ed3d403e7af82f4521806d2de64ea27a4af1d06a15392f", 1627875],
+  ["socket set screw cone point_am.sldprt", "a44270c1efa51349fecf4a252e0da7a879547f13bf0ef11ef8acb1991c81128e", 376573],
+  ["socket set screw cup point_am.sldprt", "cf5d3323c9b3956981aaee06bf25ba9f29d6f540c7f6d5907ac4acbd930b6359", 355755],
+  ["socket set screw flat point_am.sldprt", "d37272816277c2a662f6316da9910437753bfbb3df75b346d8218686cc0471b5", 233893],
+  ["solution.SLDASM", "c31b05c2c6101e881e13311c2de159947daa6149408786d2a9c25e2d169d4ffe", 26599081],
+]
+
+[[metadata.assets]]
+path = "examples/adversarial_48t_pulley_substituted_for_60t"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/16_nanoindenter_stage/examples/adversarial_48t_pulley_substituted_for_60t"
+sha256 = "89f37bcff756613443ba063f9d899d9a376289189793ea9c16cbe5d2405b24b6"
+bytes = 106016911
+files = 50
+manifest = [
+  ["3564N14_Carbon Steel Bearing Retaining Nut.SLDPRT", "f4bff01cee053330692705bfa19000a0b10c2c0eda3fd03498b101b091b0ee73", 389199],
+  ["6627T116_Stepper Motor.SLDPRT", "5e9714618f2ac3b04326b31ae4a50f0c036d5c401687f63b1e13bb0f27eb3468", 22883629],
+  ["91292A111_18-8 Stainless Steel Socket Head Screw.SLDPRT", "067f7614762035637fd7f19e4f310283b1ce493e243d73cccc79dcd8dc832ee2", 626983],
+  ["96445K157_Belleville Disc Spring.SLDPRT", "4306cefaac5d8cb43f26f0ea25747a079718d9fbbe0dba3a4fbd40776c75a1cd", 147994],
+  ["9731N39_Clamping Two-Piece Shaft Collar.SLDPRT", "719d18f502e64b4e132eb0214f15602f90d1caea3cd58df3b9d3d5008a7a7ddc", 1375386],
+  ["Amazon NEMA23 support.SLDPRT", "6d1f1d9c96bc3cc84ed11aac791750769b28ce40a0bcf60db033226b01b8e58d", 117055],
+  ["Amazon Shaft collar.SLDPRT", "417cbb0963105b80f43ab48a49cdc8913a69d2f426a2f85e9727a7886a8a8cbd", 91056],
+  ["BGBK608DD-20.sldasm", "f6dc92a6fb5c19831bcd2f0b06b83ff9d8524a9c4ff151644146d41af5a3380b", 138384],
+  ["BGBK608DD-20_h.sldprt", "83b0b2815b028eaac15d3d00634b7d246faf1df82ab22f105b95ede850d5471f", 35121],
+  ["BGHFS608DD-35.SLDASM", "d84d4cbadce47bdd67f965f6ea3d18e93ab180cda7a9d3970f4d777195297ce5", 97041],
+  ["BGHFS608DD-35_h.sldprt", "32a73c68aedf81b395631e06629dee72ae720b53eaf841d111f310ad2cce309e", 38559],
+  ["Belt Guard.SLDPRT", "783809900a6ad5b1eda9a3ae3e80e93ec82b1e62fa06a2b4267761c53a0193ba", 253268],
+  ["Belt Guard_Independent.SLDPRT", "0a43f5ab33fc4cb3badcf1e9b6e7f8323b13b691f4f5a70b7112a083cdd4f125", 255721],
+  ["Brass separator.SLDPRT", "c462d72b3b2d4080ff14b1704f0c0b883c481d0a482e5ca291eabcc8b9a9b37e", 87093],
+  ["Bridge-type transducer.SLDPRT", "bbf582896169b024412a2e1765a483961e5eba8bba59846d50478054e9893207", 359378],
+  ["CS stack.SLDASM", "5b24daf6796ee211b1ce11749c5511d870c7129be05ee5e8faf2296179cfdab6", 136163],
+  ["Compression clamp V1.02.SLDPRT", "32084766b3a64ecb6fe58b4ea631e9f4691f162be8e3f4decfcf4aa8b08ce67c", 131211],
+  ["Custom Fine Thread lead screw nut.SLDPRT", "aa31e4dc824015b1cea70b70ab58434a9d2ee3357b051a202f229f335791955f", 2086557],
+  ["Custom fine thread mirrored lead screw.SLDPRT", "5cc5a7d21438cd9cda6160cdcf3ba99630edc7e8dc9806c645e6a96ee908a27e", 4053668],
+  ["Custom input worm gear_merge.SLDPRT", "eee4a9edaf7ea0cf1580e6d0abc53621354829b858acd6e75064996ce9d0c509", 5863874],
+  ["Custom input worm.SLDPRT", "13fecb3dd66fdedddd12ff51cb67e345b7ff09806875eb20f068b8369bd75a55", 1078036],
+  ["Custom output worm gear.SLDPRT", "62e572a675de87a5fd871e1015c122bdda731c8773bdbe786ab993b6607d83db", 3588463],
+  ["Custom worm_merge.SLDPRT", "cfececaffafca1f5d9b45b4582a9d0dfdb5e3a109a2c7ecea2c6143802edffab", 1851502],
+  ["FLANGE_GPA40GT2060-B-H6.35.SLDPRT", "61c5d635c426a292b9587f7aba6cb24c8cfd392d7bd1b33b15323a3060d2c48c", 91784],
+  ["FLANGE_GPA40GT2060-B-H8.SLDPRT", "025c8842c5b6e73c8d98171128fd2e6b6eb93e73556d0dd6268c7d7fa0171a42", 89736],
+  ["Fixture.SLDPRT", "e4bbc64b03912548f22fa5a6244a71ecf2a627357af3863e1cc86efe66a2a4b2", 398548],
+  ["GPA40GT2060-B-H6.35.SLDASM", "0a272c48965a9ed12551fa0b8c8c3f085a517fae5d84fa86bfc2ed9c0c9e60de", 263559],
+  ["GPA40GT2060-B-H8.SLDASM", "d5cb9ea3a8fb9b23a0aea204d3582bc0da7096c1a8d0255efdb1ffac83324dbf", 204139],
+  ["GT2 belt.SLDPRT", "3f2565060d04f6f1f2d686d89f2de5be41b9a9ef7223636624b2935412db7bca", 40555],
+  ["Main.SLDASM", "4b4943d625b19ea7d6b7e88bed11055ef5b6a33bd7c270aa6a4f3a0474c457ed", 124331],
+  ["Movable support.SLDPRT", "47aa05636126a6fc9f9fb5ffa35ead35fd19146523f9bad7ead25175e31b4277", 199431],
+  ["RRING-C-INT-22.sldprt", "32578e12d54393ab3a335a1dfe9764b2362b1d7e007a0fc059f1da7a2bfbf8ba", 36569],
+  ["Revolver type transducer.SLDPRT", "cdf48ffe931ba60b542e41f1df0a125f0826d8e1b94bf42a4186ccd584079ef7", 79607],
+  ["SSM series load cell.SLDPRT", "7d086b35923b442d491503b618cc6522da61a812b9db04cdbb7d24fa5aa5bdb6", 187729],
+  ["Slide plate.SLDPRT", "0aa3a44769d3ec7e13ef2df008912018aae10ffec51e44a96a16481c00082388", 204127],
+  ["TIMING PULLEY_GPA40GT2060-B-H6.35.SLDPRT", "9736ce110e1195c4b77b6133dd4c02abb28bee5b9693aee91acf4663cfd80304", 503944],
+  ["TIMING PULLEY_GPA40GT2060-B-H8.SLDPRT", "de15173a84dfd59c98d12c329e3c66e980877f84bcace18269a32cde55147c91", 403137],
+  ["Threaded shaft collar.SLDPRT", "16d67cc9d5c1c8f1da224ba9caf3dfe5d2856ac30b2cdcbe721f71cc3483310a", 540749],
+  ["Working volume.SLDPRT", "2b9a029892d4a7bcd2d75113451d852e3a2ac0958b12f33780f5cc9c9e81ee40", 54333],
+  ["YSZ clamp.SLDASM", "1164d24998c29df68ccdf10bcfb2f574ec3ee199f348b13b49a926e3b2a4dfd2", 26595483],
+  ["Yttria stabilized zirconia sample.SLDPRT", "63cd3494c7a6f1e1f8aa34cfb9d8f849e2695f8ee6293ee36c0285eca8ec5433", 52266],
+  ["adversarial_48t_pulley_substituted_for_60t.SLDASM", "1164d24998c29df68ccdf10bcfb2f574ec3ee199f348b13b49a926e3b2a4dfd2", 26595483],
+  ["bearing_608.sldprt", "39e3b55e9fa5839dc9d2031e71d557622e2ba99c5150cdee868709d00966997e", 33524],
+  ["flat washer narrow_am.sldprt", "73ad1c98284c440209931137ab6b3bb0dd950ee4ec309708f0abb3043e7cd63b", 143848],
+  ["prevailing torque hex nut_am.sldprt", "7e0e864f33c168b26473b90ff298c822b537b17a5d7b9af463b9b925b7cbcbc9", 383784],
+  ["socket head cap screw_ai.sldprt", "7f02d896e69dde4cbc955703e3cd0b1857c429088f4de9dbfc8c1887c073f5d5", 510808],
+  ["socket head cap screw_am.sldprt", "6a4f24ae675c247e80ed3d403e7af82f4521806d2de64ea27a4af1d06a15392f", 1627875],
+  ["socket set screw cone point_am.sldprt", "a44270c1efa51349fecf4a252e0da7a879547f13bf0ef11ef8acb1991c81128e", 376573],
+  ["socket set screw cup point_am.sldprt", "cf5d3323c9b3956981aaee06bf25ba9f29d6f540c7f6d5907ac4acbd930b6359", 355755],
+  ["socket set screw flat point_am.sldprt", "d37272816277c2a662f6316da9910437753bfbb3df75b346d8218686cc0471b5", 233893],
+]
+
+[[metadata.assets]]
+path = "examples/adversarial_60t_pulley_fitted_to_wrong_shaft"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/16_nanoindenter_stage/examples/adversarial_60t_pulley_fitted_to_wrong_shaft"
+sha256 = "3aba515e1de64d97d6d4a3b1c82ab0525e677f1d35368b4ccbf54fe31148f48e"
+bytes = 106153531
+files = 49
+manifest = [
+  ["3564N14_Carbon Steel Bearing Retaining Nut.SLDPRT", "f4bff01cee053330692705bfa19000a0b10c2c0eda3fd03498b101b091b0ee73", 389199],
+  ["6627T116_Stepper Motor.SLDPRT", "5e9714618f2ac3b04326b31ae4a50f0c036d5c401687f63b1e13bb0f27eb3468", 22883629],
+  ["91292A111_18-8 Stainless Steel Socket Head Screw.SLDPRT", "067f7614762035637fd7f19e4f310283b1ce493e243d73cccc79dcd8dc832ee2", 626983],
+  ["96445K157_Belleville Disc Spring.SLDPRT", "4306cefaac5d8cb43f26f0ea25747a079718d9fbbe0dba3a4fbd40776c75a1cd", 147994],
+  ["9731N39_Clamping Two-Piece Shaft Collar.SLDPRT", "719d18f502e64b4e132eb0214f15602f90d1caea3cd58df3b9d3d5008a7a7ddc", 1375386],
+  ["Amazon NEMA23 support.SLDPRT", "6d1f1d9c96bc3cc84ed11aac791750769b28ce40a0bcf60db033226b01b8e58d", 117055],
+  ["Amazon Shaft collar.SLDPRT", "417cbb0963105b80f43ab48a49cdc8913a69d2f426a2f85e9727a7886a8a8cbd", 91056],
+  ["BGBK608DD-20.sldasm", "f6dc92a6fb5c19831bcd2f0b06b83ff9d8524a9c4ff151644146d41af5a3380b", 138384],
+  ["BGBK608DD-20_h.sldprt", "83b0b2815b028eaac15d3d00634b7d246faf1df82ab22f105b95ede850d5471f", 35121],
+  ["BGHFS608DD-35.SLDASM", "d84d4cbadce47bdd67f965f6ea3d18e93ab180cda7a9d3970f4d777195297ce5", 97041],
+  ["BGHFS608DD-35_h.sldprt", "32a73c68aedf81b395631e06629dee72ae720b53eaf841d111f310ad2cce309e", 38559],
+  ["Belt Guard.SLDPRT", "3f704776b0a85e274a7735f8d1fedece7e179a1cab0e43f72ffac4b5417c4a4a", 254755],
+  ["Belt Guard_Independent.SLDPRT", "0a43f5ab33fc4cb3badcf1e9b6e7f8323b13b691f4f5a70b7112a083cdd4f125", 255721],
+  ["Brass separator.SLDPRT", "c462d72b3b2d4080ff14b1704f0c0b883c481d0a482e5ca291eabcc8b9a9b37e", 87093],
+  ["Bridge-type transducer.SLDPRT", "bbf582896169b024412a2e1765a483961e5eba8bba59846d50478054e9893207", 359378],
+  ["CS stack.SLDASM", "5b24daf6796ee211b1ce11749c5511d870c7129be05ee5e8faf2296179cfdab6", 136163],
+  ["Compression clamp V1.02.SLDPRT", "32084766b3a64ecb6fe58b4ea631e9f4691f162be8e3f4decfcf4aa8b08ce67c", 131211],
+  ["Custom Fine Thread lead screw nut.SLDPRT", "aa31e4dc824015b1cea70b70ab58434a9d2ee3357b051a202f229f335791955f", 2086557],
+  ["Custom fine thread mirrored lead screw.SLDPRT", "5cc5a7d21438cd9cda6160cdcf3ba99630edc7e8dc9806c645e6a96ee908a27e", 4053668],
+  ["Custom input worm gear_merge.SLDPRT", "eee4a9edaf7ea0cf1580e6d0abc53621354829b858acd6e75064996ce9d0c509", 5863874],
+  ["Custom input worm.SLDPRT", "13fecb3dd66fdedddd12ff51cb67e345b7ff09806875eb20f068b8369bd75a55", 1078036],
+  ["Custom output worm gear.SLDPRT", "62e572a675de87a5fd871e1015c122bdda731c8773bdbe786ab993b6607d83db", 3588463],
+  ["Custom worm_merge.SLDPRT", "cfececaffafca1f5d9b45b4582a9d0dfdb5e3a109a2c7ecea2c6143802edffab", 1851502],
+  ["FLANGE_GPA40GT2060-B-H6.35.SLDPRT", "1cff49b7c4e5aa85b40777f05a764358695ada5c894af76a3f26456e2460d5e4", 90433],
+  ["FLANGE_GPA40GT2060-B-H8.SLDPRT", "7c89f64d964ac2cad23cd581083aacf791944c3f8e26b4e3c7a1e89042161645", 101664],
+  ["Fixture.SLDPRT", "cc3308552185142fde0814b1be40d389e6768336315b59c58fd75c2dda2723a8", 405531],
+  ["GPA40GT2060-B-H6.35.SLDASM", "8051f17327d406994d68144f86a57445506ab60e8aa87d81f33df831f27fb01e", 204013],
+  ["GPA40GT2060-B-H8.SLDASM", "0689e006f8f73a4280d0d49df1b9d49406db6a7765a5e6a4315e9c110670568b", 204535],
+  ["Main.SLDASM", "4b4943d625b19ea7d6b7e88bed11055ef5b6a33bd7c270aa6a4f3a0474c457ed", 124331],
+  ["Movable support.SLDPRT", "47aa05636126a6fc9f9fb5ffa35ead35fd19146523f9bad7ead25175e31b4277", 199431],
+  ["RRING-C-INT-22.sldprt", "32578e12d54393ab3a335a1dfe9764b2362b1d7e007a0fc059f1da7a2bfbf8ba", 36569],
+  ["Revolver type transducer.SLDPRT", "cdf48ffe931ba60b542e41f1df0a125f0826d8e1b94bf42a4186ccd584079ef7", 79607],
+  ["SSM series load cell.SLDPRT", "7d086b35923b442d491503b618cc6522da61a812b9db04cdbb7d24fa5aa5bdb6", 187729],
+  ["Slide plate.SLDPRT", "0aa3a44769d3ec7e13ef2df008912018aae10ffec51e44a96a16481c00082388", 204127],
+  ["TIMING PULLEY_GPA40GT2060-B-H6.35.SLDPRT", "aca2c8dbcbe369ed8ce0a0156b69d0cc9633a19ddd57c885225a83209b0696ab", 430957],
+  ["TIMING PULLEY_GPA40GT2060-B-H8.SLDPRT", "28c01724fc6351cc3d3ae22010938e8c9d7462bf5f2ff34843634b38c1312187", 526768],
+  ["Threaded shaft collar.SLDPRT", "16d67cc9d5c1c8f1da224ba9caf3dfe5d2856ac30b2cdcbe721f71cc3483310a", 540749],
+  ["Working volume.SLDPRT", "2b9a029892d4a7bcd2d75113451d852e3a2ac0958b12f33780f5cc9c9e81ee40", 54333],
+  ["YSZ clamp.SLDASM", "1665be99e8878068e57adc93e0358d358ed7e7427adcfa9be450a3211b6afc70", 26678800],
+  ["Yttria stabilized zirconia sample.SLDPRT", "63cd3494c7a6f1e1f8aa34cfb9d8f849e2695f8ee6293ee36c0285eca8ec5433", 52266],
+  ["adversarial_60t_pulley_fitted_to_wrong_shaft.SLDASM", "1665be99e8878068e57adc93e0358d358ed7e7427adcfa9be450a3211b6afc70", 26678800],
+  ["bearing_608.sldprt", "39e3b55e9fa5839dc9d2031e71d557622e2ba99c5150cdee868709d00966997e", 33524],
+  ["flat washer narrow_am.sldprt", "73ad1c98284c440209931137ab6b3bb0dd950ee4ec309708f0abb3043e7cd63b", 143848],
+  ["prevailing torque hex nut_am.sldprt", "7e0e864f33c168b26473b90ff298c822b537b17a5d7b9af463b9b925b7cbcbc9", 383784],
+  ["socket head cap screw_ai.sldprt", "7f02d896e69dde4cbc955703e3cd0b1857c429088f4de9dbfc8c1887c073f5d5", 510808],
+  ["socket head cap screw_am.sldprt", "6a4f24ae675c247e80ed3d403e7af82f4521806d2de64ea27a4af1d06a15392f", 1627875],
+  ["socket set screw cone point_am.sldprt", "a44270c1efa51349fecf4a252e0da7a879547f13bf0ef11ef8acb1991c81128e", 376573],
+  ["socket set screw cup point_am.sldprt", "cf5d3323c9b3956981aaee06bf25ba9f29d6f540c7f6d5907ac4acbd930b6359", 355755],
+  ["socket set screw flat point_am.sldprt", "d37272816277c2a662f6316da9910437753bfbb3df75b346d8218686cc0471b5", 233893],
+]
+
+[[metadata.assets]]
+path = "examples/adversarial_feature_tree_rebuild_errors_dangling_references"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/16_nanoindenter_stage/examples/adversarial_feature_tree_rebuild_errors_dangling_references"
+sha256 = "2c32f606b06477b7e6166ce02a65b7c58633ad3ae62f160544edefb6946c1188"
+bytes = 105914306
+files = 50
+manifest = [
+  ["3564N14_Carbon Steel Bearing Retaining Nut.SLDPRT", "f4bff01cee053330692705bfa19000a0b10c2c0eda3fd03498b101b091b0ee73", 389199],
+  ["6627T116_Stepper Motor.SLDPRT", "5e9714618f2ac3b04326b31ae4a50f0c036d5c401687f63b1e13bb0f27eb3468", 22883629],
+  ["91292A111_18-8 Stainless Steel Socket Head Screw.SLDPRT", "067f7614762035637fd7f19e4f310283b1ce493e243d73cccc79dcd8dc832ee2", 626983],
+  ["96445K157_Belleville Disc Spring.SLDPRT", "4306cefaac5d8cb43f26f0ea25747a079718d9fbbe0dba3a4fbd40776c75a1cd", 147994],
+  ["9731N39_Clamping Two-Piece Shaft Collar.SLDPRT", "719d18f502e64b4e132eb0214f15602f90d1caea3cd58df3b9d3d5008a7a7ddc", 1375386],
+  ["Amazon NEMA23 support.SLDPRT", "6d1f1d9c96bc3cc84ed11aac791750769b28ce40a0bcf60db033226b01b8e58d", 117055],
+  ["Amazon Shaft collar.SLDPRT", "417cbb0963105b80f43ab48a49cdc8913a69d2f426a2f85e9727a7886a8a8cbd", 91056],
+  ["BGBK608DD-20.sldasm", "f6dc92a6fb5c19831bcd2f0b06b83ff9d8524a9c4ff151644146d41af5a3380b", 138384],
+  ["BGBK608DD-20_h.sldprt", "83b0b2815b028eaac15d3d00634b7d246faf1df82ab22f105b95ede850d5471f", 35121],
+  ["BGHFS608DD-35.SLDASM", "d84d4cbadce47bdd67f965f6ea3d18e93ab180cda7a9d3970f4d777195297ce5", 97041],
+  ["BGHFS608DD-35_h.sldprt", "32a73c68aedf81b395631e06629dee72ae720b53eaf841d111f310ad2cce309e", 38559],
+  ["Belt Guard.SLDPRT", "11d97f5392025bb0718c2ea8bd1851f5b1a9d9d6ea7be2d3a58301b022a23132", 210309],
+  ["Belt Guard_Independent.SLDPRT", "0a43f5ab33fc4cb3badcf1e9b6e7f8323b13b691f4f5a70b7112a083cdd4f125", 255721],
+  ["Brass separator.SLDPRT", "c462d72b3b2d4080ff14b1704f0c0b883c481d0a482e5ca291eabcc8b9a9b37e", 87093],
+  ["Bridge-type transducer.SLDPRT", "bbf582896169b024412a2e1765a483961e5eba8bba59846d50478054e9893207", 359378],
+  ["CS stack.SLDASM", "5b24daf6796ee211b1ce11749c5511d870c7129be05ee5e8faf2296179cfdab6", 136163],
+  ["Compression clamp V1.02.SLDPRT", "2b16ec9298846da3be24f6ccd6a3bb0cd00c39343939482bf378856323a939a8", 126371],
+  ["Custom Fine Thread lead screw nut.SLDPRT", "aa31e4dc824015b1cea70b70ab58434a9d2ee3357b051a202f229f335791955f", 2086557],
+  ["Custom fine thread mirrored lead screw.SLDPRT", "5cc5a7d21438cd9cda6160cdcf3ba99630edc7e8dc9806c645e6a96ee908a27e", 4053668],
+  ["Custom input worm gear_merge.SLDPRT", "eee4a9edaf7ea0cf1580e6d0abc53621354829b858acd6e75064996ce9d0c509", 5863874],
+  ["Custom input worm.SLDPRT", "13fecb3dd66fdedddd12ff51cb67e345b7ff09806875eb20f068b8369bd75a55", 1078036],
+  ["Custom output worm gear.SLDPRT", "62e572a675de87a5fd871e1015c122bdda731c8773bdbe786ab993b6607d83db", 3588463],
+  ["Custom worm_merge.SLDPRT", "cfececaffafca1f5d9b45b4582a9d0dfdb5e3a109a2c7ecea2c6143802edffab", 1851502],
+  ["FLANGE_GPA40GT2060-B-H6.35.SLDPRT", "d2b1f96031748ce2132d5ec1a43952562e70b9c0b180e4b0b11d0b83b1ffb0c6", 90408],
+  ["FLANGE_GPA40GT2060-B-H8.SLDPRT", "025c8842c5b6e73c8d98171128fd2e6b6eb93e73556d0dd6268c7d7fa0171a42", 89736],
+  ["Fixture.SLDPRT", "da8c8d1d2bd1477106f93b643977a0410f8393a7d4b30053201588136094ccfe", 383546],
+  ["GPA40GT2060-B-H6.35.SLDASM", "f9a248a06172ab45f07037222245bf86fbb1ffe67b7af68a219f025958b9eb8a", 262197],
+  ["GPA40GT2060-B-H8.SLDASM", "d5cb9ea3a8fb9b23a0aea204d3582bc0da7096c1a8d0255efdb1ffac83324dbf", 204139],
+  ["GT2 belt.SLDPRT", "0bbf7c1706ab52177c270eb4b4ec5698c4b56ecde5585347ba1c7ebd4ba38a5a", 40505],
+  ["Main.SLDASM", "4b4943d625b19ea7d6b7e88bed11055ef5b6a33bd7c270aa6a4f3a0474c457ed", 124331],
+  ["Movable support.SLDPRT", "47aa05636126a6fc9f9fb5ffa35ead35fd19146523f9bad7ead25175e31b4277", 199431],
+  ["RRING-C-INT-22.sldprt", "32578e12d54393ab3a335a1dfe9764b2362b1d7e007a0fc059f1da7a2bfbf8ba", 36569],
+  ["Revolver type transducer.SLDPRT", "cdf48ffe931ba60b542e41f1df0a125f0826d8e1b94bf42a4186ccd584079ef7", 79607],
+  ["SSM series load cell.SLDPRT", "7d086b35923b442d491503b618cc6522da61a812b9db04cdbb7d24fa5aa5bdb6", 187729],
+  ["Slide plate.SLDPRT", "0aa3a44769d3ec7e13ef2df008912018aae10ffec51e44a96a16481c00082388", 204127],
+  ["TIMING PULLEY_GPA40GT2060-B-H6.35.SLDPRT", "deb4e77e30cffb2f14a017e370a66a26e8abb7a9ba2a02dead50b92662ff2694", 470336],
+  ["TIMING PULLEY_GPA40GT2060-B-H8.SLDPRT", "de15173a84dfd59c98d12c329e3c66e980877f84bcace18269a32cde55147c91", 403137],
+  ["Threaded shaft collar.SLDPRT", "16d67cc9d5c1c8f1da224ba9caf3dfe5d2856ac30b2cdcbe721f71cc3483310a", 540749],
+  ["Working volume.SLDPRT", "2b9a029892d4a7bcd2d75113451d852e3a2ac0958b12f33780f5cc9c9e81ee40", 54333],
+  ["YSZ clamp.SLDASM", "bb69a2b64c50cbe24ffc48a8f649a039319b32e3370105d37eb04bd885654d69", 26593779],
+  ["Yttria stabilized zirconia sample.SLDPRT", "63cd3494c7a6f1e1f8aa34cfb9d8f849e2695f8ee6293ee36c0285eca8ec5433", 52266],
+  ["adversarial_feature_tree_rebuild_errors_dangling_references.SLDASM", "bb69a2b64c50cbe24ffc48a8f649a039319b32e3370105d37eb04bd885654d69", 26593779],
+  ["bearing_608.sldprt", "39e3b55e9fa5839dc9d2031e71d557622e2ba99c5150cdee868709d00966997e", 33524],
+  ["flat washer narrow_am.sldprt", "73ad1c98284c440209931137ab6b3bb0dd950ee4ec309708f0abb3043e7cd63b", 143848],
+  ["prevailing torque hex nut_am.sldprt", "7e0e864f33c168b26473b90ff298c822b537b17a5d7b9af463b9b925b7cbcbc9", 383784],
+  ["socket head cap screw_ai.sldprt", "7f02d896e69dde4cbc955703e3cd0b1857c429088f4de9dbfc8c1887c073f5d5", 510808],
+  ["socket head cap screw_am.sldprt", "6a4f24ae675c247e80ed3d403e7af82f4521806d2de64ea27a4af1d06a15392f", 1627875],
+  ["socket set screw cone point_am.sldprt", "a44270c1efa51349fecf4a252e0da7a879547f13bf0ef11ef8acb1991c81128e", 376573],
+  ["socket set screw cup point_am.sldprt", "cf5d3323c9b3956981aaee06bf25ba9f29d6f540c7f6d5907ac4acbd930b6359", 355755],
+  ["socket set screw flat point_am.sldprt", "d37272816277c2a662f6316da9910437753bfbb3df75b346d8218686cc0471b5", 233893],
+]
+
+[[metadata.assets]]
+path = "examples/adversarial_fixture_plate_extended_but_side_plate_remains"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/16_nanoindenter_stage/examples/adversarial_fixture_plate_extended_but_side_plate_remains"
+sha256 = "fe8186dc4869bba935c3d343bf24ddd7a4681e83d4ab39b26c87274f2009b04d"
+bytes = 105974717
+files = 49
+manifest = [
+  ["3564N14_Carbon Steel Bearing Retaining Nut.SLDPRT", "f4bff01cee053330692705bfa19000a0b10c2c0eda3fd03498b101b091b0ee73", 389199],
+  ["6627T116_Stepper Motor.SLDPRT", "5e9714618f2ac3b04326b31ae4a50f0c036d5c401687f63b1e13bb0f27eb3468", 22883629],
+  ["91292A111_18-8 Stainless Steel Socket Head Screw.SLDPRT", "067f7614762035637fd7f19e4f310283b1ce493e243d73cccc79dcd8dc832ee2", 626983],
+  ["96445K157_Belleville Disc Spring.SLDPRT", "4306cefaac5d8cb43f26f0ea25747a079718d9fbbe0dba3a4fbd40776c75a1cd", 147994],
+  ["9731N39_Clamping Two-Piece Shaft Collar.SLDPRT", "719d18f502e64b4e132eb0214f15602f90d1caea3cd58df3b9d3d5008a7a7ddc", 1375386],
+  ["Amazon NEMA23 support.SLDPRT", "6d1f1d9c96bc3cc84ed11aac791750769b28ce40a0bcf60db033226b01b8e58d", 117055],
+  ["Amazon Shaft collar.SLDPRT", "417cbb0963105b80f43ab48a49cdc8913a69d2f426a2f85e9727a7886a8a8cbd", 91056],
+  ["BGBK608DD-20.sldasm", "f6dc92a6fb5c19831bcd2f0b06b83ff9d8524a9c4ff151644146d41af5a3380b", 138384],
+  ["BGBK608DD-20_h.sldprt", "83b0b2815b028eaac15d3d00634b7d246faf1df82ab22f105b95ede850d5471f", 35121],
+  ["BGHFS608DD-35.SLDASM", "d84d4cbadce47bdd67f965f6ea3d18e93ab180cda7a9d3970f4d777195297ce5", 97041],
+  ["BGHFS608DD-35_h.sldprt", "32a73c68aedf81b395631e06629dee72ae720b53eaf841d111f310ad2cce309e", 38559],
+  ["Belt Guard.SLDPRT", "f83a777878aa60e597fab09028e1780341e811a7401e414e08e33e100243c3fe", 255142],
+  ["Belt Guard_Independent.SLDPRT", "0a43f5ab33fc4cb3badcf1e9b6e7f8323b13b691f4f5a70b7112a083cdd4f125", 255721],
+  ["Brass separator.SLDPRT", "c462d72b3b2d4080ff14b1704f0c0b883c481d0a482e5ca291eabcc8b9a9b37e", 87093],
+  ["Bridge-type transducer.SLDPRT", "bbf582896169b024412a2e1765a483961e5eba8bba59846d50478054e9893207", 359378],
+  ["CS stack.SLDASM", "5b24daf6796ee211b1ce11749c5511d870c7129be05ee5e8faf2296179cfdab6", 136163],
+  ["Compression clamp V1.02.SLDPRT", "32084766b3a64ecb6fe58b4ea631e9f4691f162be8e3f4decfcf4aa8b08ce67c", 131211],
+  ["Custom Fine Thread lead screw nut.SLDPRT", "aa31e4dc824015b1cea70b70ab58434a9d2ee3357b051a202f229f335791955f", 2086557],
+  ["Custom fine thread mirrored lead screw.SLDPRT", "5cc5a7d21438cd9cda6160cdcf3ba99630edc7e8dc9806c645e6a96ee908a27e", 4053668],
+  ["Custom input worm gear_merge.SLDPRT", "eee4a9edaf7ea0cf1580e6d0abc53621354829b858acd6e75064996ce9d0c509", 5863874],
+  ["Custom input worm.SLDPRT", "13fecb3dd66fdedddd12ff51cb67e345b7ff09806875eb20f068b8369bd75a55", 1078036],
+  ["Custom output worm gear.SLDPRT", "62e572a675de87a5fd871e1015c122bdda731c8773bdbe786ab993b6607d83db", 3588463],
+  ["Custom worm_merge.SLDPRT", "cfececaffafca1f5d9b45b4582a9d0dfdb5e3a109a2c7ecea2c6143802edffab", 1851502],
+  ["FLANGE_GPA40GT2060-B-H6.35.SLDPRT", "1cff49b7c4e5aa85b40777f05a764358695ada5c894af76a3f26456e2460d5e4", 90433],
+  ["FLANGE_GPA40GT2060-B-H8.SLDPRT", "025c8842c5b6e73c8d98171128fd2e6b6eb93e73556d0dd6268c7d7fa0171a42", 89736],
+  ["Fixture.SLDPRT", "0c1562ae24c685f08161671d9ffffc56084ad6fa5984565b073f3fcc80ff334d", 412605],
+  ["GPA40GT2060-B-H6.35.SLDASM", "8051f17327d406994d68144f86a57445506ab60e8aa87d81f33df831f27fb01e", 204013],
+  ["GPA40GT2060-B-H8.SLDASM", "d5cb9ea3a8fb9b23a0aea204d3582bc0da7096c1a8d0255efdb1ffac83324dbf", 204139],
+  ["Main.SLDASM", "4b4943d625b19ea7d6b7e88bed11055ef5b6a33bd7c270aa6a4f3a0474c457ed", 124331],
+  ["Movable support.SLDPRT", "47aa05636126a6fc9f9fb5ffa35ead35fd19146523f9bad7ead25175e31b4277", 199431],
+  ["RRING-C-INT-22.sldprt", "32578e12d54393ab3a335a1dfe9764b2362b1d7e007a0fc059f1da7a2bfbf8ba", 36569],
+  ["Revolver type transducer.SLDPRT", "cdf48ffe931ba60b542e41f1df0a125f0826d8e1b94bf42a4186ccd584079ef7", 79607],
+  ["SSM series load cell.SLDPRT", "7d086b35923b442d491503b618cc6522da61a812b9db04cdbb7d24fa5aa5bdb6", 187729],
+  ["Slide plate.SLDPRT", "0aa3a44769d3ec7e13ef2df008912018aae10ffec51e44a96a16481c00082388", 204127],
+  ["TIMING PULLEY_GPA40GT2060-B-H6.35.SLDPRT", "aca2c8dbcbe369ed8ce0a0156b69d0cc9633a19ddd57c885225a83209b0696ab", 430957],
+  ["TIMING PULLEY_GPA40GT2060-B-H8.SLDPRT", "de15173a84dfd59c98d12c329e3c66e980877f84bcace18269a32cde55147c91", 403137],
+  ["Threaded shaft collar.SLDPRT", "16d67cc9d5c1c8f1da224ba9caf3dfe5d2856ac30b2cdcbe721f71cc3483310a", 540749],
+  ["Working volume.SLDPRT", "2b9a029892d4a7bcd2d75113451d852e3a2ac0958b12f33780f5cc9c9e81ee40", 54333],
+  ["YSZ clamp.SLDASM", "a8e0a599543229a7f96e466e5f4e201e8cfe17f6c3601f6e7fdebc98a42847b3", 26653640],
+  ["Yttria stabilized zirconia sample.SLDPRT", "63cd3494c7a6f1e1f8aa34cfb9d8f849e2695f8ee6293ee36c0285eca8ec5433", 52266],
+  ["adversarial_fixture_plate_extended_but_side_plate_remains.SLDASM", "a8e0a599543229a7f96e466e5f4e201e8cfe17f6c3601f6e7fdebc98a42847b3", 26653640],
+  ["bearing_608.sldprt", "39e3b55e9fa5839dc9d2031e71d557622e2ba99c5150cdee868709d00966997e", 33524],
+  ["flat washer narrow_am.sldprt", "73ad1c98284c440209931137ab6b3bb0dd950ee4ec309708f0abb3043e7cd63b", 143848],
+  ["prevailing torque hex nut_am.sldprt", "7e0e864f33c168b26473b90ff298c822b537b17a5d7b9af463b9b925b7cbcbc9", 383784],
+  ["socket head cap screw_ai.sldprt", "7f02d896e69dde4cbc955703e3cd0b1857c429088f4de9dbfc8c1887c073f5d5", 510808],
+  ["socket head cap screw_am.sldprt", "6a4f24ae675c247e80ed3d403e7af82f4521806d2de64ea27a4af1d06a15392f", 1627875],
+  ["socket set screw cone point_am.sldprt", "a44270c1efa51349fecf4a252e0da7a879547f13bf0ef11ef8acb1991c81128e", 376573],
+  ["socket set screw cup point_am.sldprt", "cf5d3323c9b3956981aaee06bf25ba9f29d6f540c7f6d5907ac4acbd930b6359", 355755],
+  ["socket set screw flat point_am.sldprt", "d37272816277c2a662f6316da9910437753bfbb3df75b346d8218686cc0471b5", 233893],
+]
+
+[[metadata.assets]]
+path = "examples/adversarial_guard_leaves_belt_exposed"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/16_nanoindenter_stage/examples/adversarial_guard_leaves_belt_exposed"
+sha256 = "42491c328f0a1a958362dd385bd1de698b0d39a90539157b4430b6cd6092c093"
+bytes = 105870807
+files = 49
+manifest = [
+  ["3564N14_Carbon Steel Bearing Retaining Nut.SLDPRT", "f4bff01cee053330692705bfa19000a0b10c2c0eda3fd03498b101b091b0ee73", 389199],
+  ["6627T116_Stepper Motor.SLDPRT", "5e9714618f2ac3b04326b31ae4a50f0c036d5c401687f63b1e13bb0f27eb3468", 22883629],
+  ["91292A111_18-8 Stainless Steel Socket Head Screw.SLDPRT", "067f7614762035637fd7f19e4f310283b1ce493e243d73cccc79dcd8dc832ee2", 626983],
+  ["96445K157_Belleville Disc Spring.SLDPRT", "4306cefaac5d8cb43f26f0ea25747a079718d9fbbe0dba3a4fbd40776c75a1cd", 147994],
+  ["9731N39_Clamping Two-Piece Shaft Collar.SLDPRT", "719d18f502e64b4e132eb0214f15602f90d1caea3cd58df3b9d3d5008a7a7ddc", 1375386],
+  ["Amazon NEMA23 support.SLDPRT", "6d1f1d9c96bc3cc84ed11aac791750769b28ce40a0bcf60db033226b01b8e58d", 117055],
+  ["Amazon Shaft collar.SLDPRT", "417cbb0963105b80f43ab48a49cdc8913a69d2f426a2f85e9727a7886a8a8cbd", 91056],
+  ["BGBK608DD-20.sldasm", "f6dc92a6fb5c19831bcd2f0b06b83ff9d8524a9c4ff151644146d41af5a3380b", 138384],
+  ["BGBK608DD-20_h.sldprt", "83b0b2815b028eaac15d3d00634b7d246faf1df82ab22f105b95ede850d5471f", 35121],
+  ["BGHFS608DD-35.SLDASM", "d84d4cbadce47bdd67f965f6ea3d18e93ab180cda7a9d3970f4d777195297ce5", 97041],
+  ["BGHFS608DD-35_h.sldprt", "32a73c68aedf81b395631e06629dee72ae720b53eaf841d111f310ad2cce309e", 38559],
+  ["Belt Guard.SLDPRT", "7201b8e1b757b761d941a4e2473590353133750dcfc37c5a570348668679ad59", 245445],
+  ["Belt Guard_Independent.SLDPRT", "0a43f5ab33fc4cb3badcf1e9b6e7f8323b13b691f4f5a70b7112a083cdd4f125", 255721],
+  ["Brass separator.SLDPRT", "c462d72b3b2d4080ff14b1704f0c0b883c481d0a482e5ca291eabcc8b9a9b37e", 87093],
+  ["Bridge-type transducer.SLDPRT", "bbf582896169b024412a2e1765a483961e5eba8bba59846d50478054e9893207", 359378],
+  ["CS stack.SLDASM", "5b24daf6796ee211b1ce11749c5511d870c7129be05ee5e8faf2296179cfdab6", 136163],
+  ["Compression clamp V1.02.SLDPRT", "32084766b3a64ecb6fe58b4ea631e9f4691f162be8e3f4decfcf4aa8b08ce67c", 131211],
+  ["Custom Fine Thread lead screw nut.SLDPRT", "aa31e4dc824015b1cea70b70ab58434a9d2ee3357b051a202f229f335791955f", 2086557],
+  ["Custom fine thread mirrored lead screw.SLDPRT", "5cc5a7d21438cd9cda6160cdcf3ba99630edc7e8dc9806c645e6a96ee908a27e", 4053668],
+  ["Custom input worm gear_merge.SLDPRT", "eee4a9edaf7ea0cf1580e6d0abc53621354829b858acd6e75064996ce9d0c509", 5863874],
+  ["Custom input worm.SLDPRT", "13fecb3dd66fdedddd12ff51cb67e345b7ff09806875eb20f068b8369bd75a55", 1078036],
+  ["Custom output worm gear.SLDPRT", "62e572a675de87a5fd871e1015c122bdda731c8773bdbe786ab993b6607d83db", 3588463],
+  ["Custom worm_merge.SLDPRT", "cfececaffafca1f5d9b45b4582a9d0dfdb5e3a109a2c7ecea2c6143802edffab", 1851502],
+  ["FLANGE_GPA40GT2060-B-H6.35.SLDPRT", "1cff49b7c4e5aa85b40777f05a764358695ada5c894af76a3f26456e2460d5e4", 90433],
+  ["FLANGE_GPA40GT2060-B-H8.SLDPRT", "025c8842c5b6e73c8d98171128fd2e6b6eb93e73556d0dd6268c7d7fa0171a42", 89736],
+  ["Fixture.SLDPRT", "909a6f850fdfadcf59dee92c349adf812d2691b06bb3c811266006fac415d6cb", 271142],
+  ["GPA40GT2060-B-H6.35.SLDASM", "8051f17327d406994d68144f86a57445506ab60e8aa87d81f33df831f27fb01e", 204013],
+  ["GPA40GT2060-B-H8.SLDASM", "d5cb9ea3a8fb9b23a0aea204d3582bc0da7096c1a8d0255efdb1ffac83324dbf", 204139],
+  ["Main.SLDASM", "4b4943d625b19ea7d6b7e88bed11055ef5b6a33bd7c270aa6a4f3a0474c457ed", 124331],
+  ["Movable support.SLDPRT", "47aa05636126a6fc9f9fb5ffa35ead35fd19146523f9bad7ead25175e31b4277", 199431],
+  ["RRING-C-INT-22.sldprt", "32578e12d54393ab3a335a1dfe9764b2362b1d7e007a0fc059f1da7a2bfbf8ba", 36569],
+  ["Revolver type transducer.SLDPRT", "cdf48ffe931ba60b542e41f1df0a125f0826d8e1b94bf42a4186ccd584079ef7", 79607],
+  ["SSM series load cell.SLDPRT", "7d086b35923b442d491503b618cc6522da61a812b9db04cdbb7d24fa5aa5bdb6", 187729],
+  ["Slide plate.SLDPRT", "0aa3a44769d3ec7e13ef2df008912018aae10ffec51e44a96a16481c00082388", 204127],
+  ["TIMING PULLEY_GPA40GT2060-B-H6.35.SLDPRT", "aca2c8dbcbe369ed8ce0a0156b69d0cc9633a19ddd57c885225a83209b0696ab", 430957],
+  ["TIMING PULLEY_GPA40GT2060-B-H8.SLDPRT", "de15173a84dfd59c98d12c329e3c66e980877f84bcace18269a32cde55147c91", 403137],
+  ["Threaded shaft collar.SLDPRT", "16d67cc9d5c1c8f1da224ba9caf3dfe5d2856ac30b2cdcbe721f71cc3483310a", 540749],
+  ["Working volume.SLDPRT", "2b9a029892d4a7bcd2d75113451d852e3a2ac0958b12f33780f5cc9c9e81ee40", 54333],
+  ["YSZ clamp.SLDASM", "3daec29eef3269ddf90eba7d232cff515c612ce97ee07b78c761675b2fcb129d", 26677265],
+  ["Yttria stabilized zirconia sample.SLDPRT", "63cd3494c7a6f1e1f8aa34cfb9d8f849e2695f8ee6293ee36c0285eca8ec5433", 52266],
+  ["adversarial_guard_leaves_belt_exposed.SLDASM", "3daec29eef3269ddf90eba7d232cff515c612ce97ee07b78c761675b2fcb129d", 26677265],
+  ["bearing_608.sldprt", "39e3b55e9fa5839dc9d2031e71d557622e2ba99c5150cdee868709d00966997e", 33524],
+  ["flat washer narrow_am.sldprt", "73ad1c98284c440209931137ab6b3bb0dd950ee4ec309708f0abb3043e7cd63b", 143848],
+  ["prevailing torque hex nut_am.sldprt", "7e0e864f33c168b26473b90ff298c822b537b17a5d7b9af463b9b925b7cbcbc9", 383784],
+  ["socket head cap screw_ai.sldprt", "7f02d896e69dde4cbc955703e3cd0b1857c429088f4de9dbfc8c1887c073f5d5", 510808],
+  ["socket head cap screw_am.sldprt", "6a4f24ae675c247e80ed3d403e7af82f4521806d2de64ea27a4af1d06a15392f", 1627875],
+  ["socket set screw cone point_am.sldprt", "a44270c1efa51349fecf4a252e0da7a879547f13bf0ef11ef8acb1991c81128e", 376573],
+  ["socket set screw cup point_am.sldprt", "cf5d3323c9b3956981aaee06bf25ba9f29d6f540c7f6d5907ac4acbd930b6359", 355755],
+  ["socket set screw flat point_am.sldprt", "d37272816277c2a662f6316da9910437753bfbb3df75b346d8218686cc0471b5", 233893],
+]
+
+[[metadata.assets]]
+path = "examples/adversarial_guard_removal_requires_partial_disassembly"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/16_nanoindenter_stage/examples/adversarial_guard_removal_requires_partial_disassembly"
+sha256 = "420488a497344373a9a0ff359b6878ead8d5201d629e502eac875bc3408827a8"
+bytes = 105907232
+files = 49
+manifest = [
+  ["3564N14_Carbon Steel Bearing Retaining Nut.SLDPRT", "f4bff01cee053330692705bfa19000a0b10c2c0eda3fd03498b101b091b0ee73", 389199],
+  ["6627T116_Stepper Motor.SLDPRT", "5e9714618f2ac3b04326b31ae4a50f0c036d5c401687f63b1e13bb0f27eb3468", 22883629],
+  ["91292A111_18-8 Stainless Steel Socket Head Screw.SLDPRT", "067f7614762035637fd7f19e4f310283b1ce493e243d73cccc79dcd8dc832ee2", 626983],
+  ["96445K157_Belleville Disc Spring.SLDPRT", "4306cefaac5d8cb43f26f0ea25747a079718d9fbbe0dba3a4fbd40776c75a1cd", 147994],
+  ["9731N39_Clamping Two-Piece Shaft Collar.SLDPRT", "719d18f502e64b4e132eb0214f15602f90d1caea3cd58df3b9d3d5008a7a7ddc", 1375386],
+  ["Amazon NEMA23 support.SLDPRT", "6d1f1d9c96bc3cc84ed11aac791750769b28ce40a0bcf60db033226b01b8e58d", 117055],
+  ["Amazon Shaft collar.SLDPRT", "417cbb0963105b80f43ab48a49cdc8913a69d2f426a2f85e9727a7886a8a8cbd", 91056],
+  ["BGBK608DD-20.sldasm", "f6dc92a6fb5c19831bcd2f0b06b83ff9d8524a9c4ff151644146d41af5a3380b", 138384],
+  ["BGBK608DD-20_h.sldprt", "83b0b2815b028eaac15d3d00634b7d246faf1df82ab22f105b95ede850d5471f", 35121],
+  ["BGHFS608DD-35.SLDASM", "d84d4cbadce47bdd67f965f6ea3d18e93ab180cda7a9d3970f4d777195297ce5", 97041],
+  ["BGHFS608DD-35_h.sldprt", "32a73c68aedf81b395631e06629dee72ae720b53eaf841d111f310ad2cce309e", 38559],
+  ["Belt Guard.SLDPRT", "2c80af76d288354969b006fe1a8bbb171a33f8379cede39149e47ffe82979ee6", 254801],
+  ["Belt Guard_Independent.SLDPRT", "0a43f5ab33fc4cb3badcf1e9b6e7f8323b13b691f4f5a70b7112a083cdd4f125", 255721],
+  ["Brass separator.SLDPRT", "c462d72b3b2d4080ff14b1704f0c0b883c481d0a482e5ca291eabcc8b9a9b37e", 87093],
+  ["Bridge-type transducer.SLDPRT", "bbf582896169b024412a2e1765a483961e5eba8bba59846d50478054e9893207", 359378],
+  ["CS stack.SLDASM", "5b24daf6796ee211b1ce11749c5511d870c7129be05ee5e8faf2296179cfdab6", 136163],
+  ["Compression clamp V1.02.SLDPRT", "32084766b3a64ecb6fe58b4ea631e9f4691f162be8e3f4decfcf4aa8b08ce67c", 131211],
+  ["Custom Fine Thread lead screw nut.SLDPRT", "aa31e4dc824015b1cea70b70ab58434a9d2ee3357b051a202f229f335791955f", 2086557],
+  ["Custom fine thread mirrored lead screw.SLDPRT", "5cc5a7d21438cd9cda6160cdcf3ba99630edc7e8dc9806c645e6a96ee908a27e", 4053668],
+  ["Custom input worm gear_merge.SLDPRT", "eee4a9edaf7ea0cf1580e6d0abc53621354829b858acd6e75064996ce9d0c509", 5863874],
+  ["Custom input worm.SLDPRT", "13fecb3dd66fdedddd12ff51cb67e345b7ff09806875eb20f068b8369bd75a55", 1078036],
+  ["Custom output worm gear.SLDPRT", "62e572a675de87a5fd871e1015c122bdda731c8773bdbe786ab993b6607d83db", 3588463],
+  ["Custom worm_merge.SLDPRT", "cfececaffafca1f5d9b45b4582a9d0dfdb5e3a109a2c7ecea2c6143802edffab", 1851502],
+  ["FLANGE_GPA40GT2060-B-H6.35.SLDPRT", "1cff49b7c4e5aa85b40777f05a764358695ada5c894af76a3f26456e2460d5e4", 90433],
+  ["FLANGE_GPA40GT2060-B-H8.SLDPRT", "025c8842c5b6e73c8d98171128fd2e6b6eb93e73556d0dd6268c7d7fa0171a42", 89736],
+  ["Fixture.SLDPRT", "7421f4ffeb0cd902a9ce0c0c2df3d0d2d005c04fb638d5ec79633a441eddf329", 299509],
+  ["GPA40GT2060-B-H6.35.SLDASM", "8051f17327d406994d68144f86a57445506ab60e8aa87d81f33df831f27fb01e", 204013],
+  ["GPA40GT2060-B-H8.SLDASM", "d5cb9ea3a8fb9b23a0aea204d3582bc0da7096c1a8d0255efdb1ffac83324dbf", 204139],
+  ["Main.SLDASM", "4b4943d625b19ea7d6b7e88bed11055ef5b6a33bd7c270aa6a4f3a0474c457ed", 124331],
+  ["Movable support.SLDPRT", "47aa05636126a6fc9f9fb5ffa35ead35fd19146523f9bad7ead25175e31b4277", 199431],
+  ["RRING-C-INT-22.sldprt", "32578e12d54393ab3a335a1dfe9764b2362b1d7e007a0fc059f1da7a2bfbf8ba", 36569],
+  ["Revolver type transducer.SLDPRT", "cdf48ffe931ba60b542e41f1df0a125f0826d8e1b94bf42a4186ccd584079ef7", 79607],
+  ["SSM series load cell.SLDPRT", "7d086b35923b442d491503b618cc6522da61a812b9db04cdbb7d24fa5aa5bdb6", 187729],
+  ["Slide plate.SLDPRT", "0aa3a44769d3ec7e13ef2df008912018aae10ffec51e44a96a16481c00082388", 204127],
+  ["TIMING PULLEY_GPA40GT2060-B-H6.35.SLDPRT", "aca2c8dbcbe369ed8ce0a0156b69d0cc9633a19ddd57c885225a83209b0696ab", 430957],
+  ["TIMING PULLEY_GPA40GT2060-B-H8.SLDPRT", "de15173a84dfd59c98d12c329e3c66e980877f84bcace18269a32cde55147c91", 403137],
+  ["Threaded shaft collar.SLDPRT", "16d67cc9d5c1c8f1da224ba9caf3dfe5d2856ac30b2cdcbe721f71cc3483310a", 540749],
+  ["Working volume.SLDPRT", "2b9a029892d4a7bcd2d75113451d852e3a2ac0958b12f33780f5cc9c9e81ee40", 54333],
+  ["YSZ clamp.SLDASM", "69e436d30ba4eeced243c69233ba4cc0056ee87eb94d89773690050493a3c2c3", 26676616],
+  ["Yttria stabilized zirconia sample.SLDPRT", "63cd3494c7a6f1e1f8aa34cfb9d8f849e2695f8ee6293ee36c0285eca8ec5433", 52266],
+  ["adversarial_guard_removal_requires_partial_disassembly.SLDASM", "69e436d30ba4eeced243c69233ba4cc0056ee87eb94d89773690050493a3c2c3", 26676616],
+  ["bearing_608.sldprt", "39e3b55e9fa5839dc9d2031e71d557622e2ba99c5150cdee868709d00966997e", 33524],
+  ["flat washer narrow_am.sldprt", "73ad1c98284c440209931137ab6b3bb0dd950ee4ec309708f0abb3043e7cd63b", 143848],
+  ["prevailing torque hex nut_am.sldprt", "7e0e864f33c168b26473b90ff298c822b537b17a5d7b9af463b9b925b7cbcbc9", 383784],
+  ["socket head cap screw_ai.sldprt", "7f02d896e69dde4cbc955703e3cd0b1857c429088f4de9dbfc8c1887c073f5d5", 510808],
+  ["socket head cap screw_am.sldprt", "6a4f24ae675c247e80ed3d403e7af82f4521806d2de64ea27a4af1d06a15392f", 1627875],
+  ["socket set screw cone point_am.sldprt", "a44270c1efa51349fecf4a252e0da7a879547f13bf0ef11ef8acb1991c81128e", 376573],
+  ["socket set screw cup point_am.sldprt", "cf5d3323c9b3956981aaee06bf25ba9f29d6f540c7f6d5907ac4acbd930b6359", 355755],
+  ["socket set screw flat point_am.sldprt", "d37272816277c2a662f6316da9910437753bfbb3df75b346d8218686cc0471b5", 233893],
+]
+
+[[metadata.assets]]
+path = "examples/adversarial_m6_mounting_holes_instead_of_m8"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/16_nanoindenter_stage/examples/adversarial_m6_mounting_holes_instead_of_m8"
+sha256 = "87f2a263975aac99682a417596f36e892d77b055c196f93a62a1b0276f346b3d"
+bytes = 105874725
+files = 49
+manifest = [
+  ["3564N14_Carbon Steel Bearing Retaining Nut.SLDPRT", "f4bff01cee053330692705bfa19000a0b10c2c0eda3fd03498b101b091b0ee73", 389199],
+  ["6627T116_Stepper Motor.SLDPRT", "5e9714618f2ac3b04326b31ae4a50f0c036d5c401687f63b1e13bb0f27eb3468", 22883629],
+  ["91292A111_18-8 Stainless Steel Socket Head Screw.SLDPRT", "067f7614762035637fd7f19e4f310283b1ce493e243d73cccc79dcd8dc832ee2", 626983],
+  ["96445K157_Belleville Disc Spring.SLDPRT", "4306cefaac5d8cb43f26f0ea25747a079718d9fbbe0dba3a4fbd40776c75a1cd", 147994],
+  ["9731N39_Clamping Two-Piece Shaft Collar.SLDPRT", "719d18f502e64b4e132eb0214f15602f90d1caea3cd58df3b9d3d5008a7a7ddc", 1375386],
+  ["Amazon NEMA23 support.SLDPRT", "6d1f1d9c96bc3cc84ed11aac791750769b28ce40a0bcf60db033226b01b8e58d", 117055],
+  ["Amazon Shaft collar.SLDPRT", "417cbb0963105b80f43ab48a49cdc8913a69d2f426a2f85e9727a7886a8a8cbd", 91056],
+  ["BGBK608DD-20.sldasm", "f6dc92a6fb5c19831bcd2f0b06b83ff9d8524a9c4ff151644146d41af5a3380b", 138384],
+  ["BGBK608DD-20_h.sldprt", "83b0b2815b028eaac15d3d00634b7d246faf1df82ab22f105b95ede850d5471f", 35121],
+  ["BGHFS608DD-35.SLDASM", "d84d4cbadce47bdd67f965f6ea3d18e93ab180cda7a9d3970f4d777195297ce5", 97041],
+  ["BGHFS608DD-35_h.sldprt", "32a73c68aedf81b395631e06629dee72ae720b53eaf841d111f310ad2cce309e", 38559],
+  ["Belt Guard.SLDPRT", "e666d56466138002a819c2aee44c3fcd264f5c47f86370b06aaac894cb29ff77", 251542],
+  ["Belt Guard_Independent.SLDPRT", "0a43f5ab33fc4cb3badcf1e9b6e7f8323b13b691f4f5a70b7112a083cdd4f125", 255721],
+  ["Brass separator.SLDPRT", "c462d72b3b2d4080ff14b1704f0c0b883c481d0a482e5ca291eabcc8b9a9b37e", 87093],
+  ["Bridge-type transducer.SLDPRT", "bbf582896169b024412a2e1765a483961e5eba8bba59846d50478054e9893207", 359378],
+  ["CS stack.SLDASM", "5b24daf6796ee211b1ce11749c5511d870c7129be05ee5e8faf2296179cfdab6", 136163],
+  ["Compression clamp V1.02.SLDPRT", "32084766b3a64ecb6fe58b4ea631e9f4691f162be8e3f4decfcf4aa8b08ce67c", 131211],
+  ["Custom Fine Thread lead screw nut.SLDPRT", "aa31e4dc824015b1cea70b70ab58434a9d2ee3357b051a202f229f335791955f", 2086557],
+  ["Custom fine thread mirrored lead screw.SLDPRT", "5cc5a7d21438cd9cda6160cdcf3ba99630edc7e8dc9806c645e6a96ee908a27e", 4053668],
+  ["Custom input worm gear_merge.SLDPRT", "eee4a9edaf7ea0cf1580e6d0abc53621354829b858acd6e75064996ce9d0c509", 5863874],
+  ["Custom input worm.SLDPRT", "13fecb3dd66fdedddd12ff51cb67e345b7ff09806875eb20f068b8369bd75a55", 1078036],
+  ["Custom output worm gear.SLDPRT", "62e572a675de87a5fd871e1015c122bdda731c8773bdbe786ab993b6607d83db", 3588463],
+  ["Custom worm_merge.SLDPRT", "cfececaffafca1f5d9b45b4582a9d0dfdb5e3a109a2c7ecea2c6143802edffab", 1851502],
+  ["FLANGE_GPA40GT2060-B-H6.35.SLDPRT", "1cff49b7c4e5aa85b40777f05a764358695ada5c894af76a3f26456e2460d5e4", 90433],
+  ["FLANGE_GPA40GT2060-B-H8.SLDPRT", "025c8842c5b6e73c8d98171128fd2e6b6eb93e73556d0dd6268c7d7fa0171a42", 89736],
+  ["Fixture.SLDPRT", "5a2ed918151bc0eaceaee65ea7f9a98ab382eb2a762e957f69ee2132ec9fabc0", 389321],
+  ["GPA40GT2060-B-H6.35.SLDASM", "8051f17327d406994d68144f86a57445506ab60e8aa87d81f33df831f27fb01e", 204013],
+  ["GPA40GT2060-B-H8.SLDASM", "d5cb9ea3a8fb9b23a0aea204d3582bc0da7096c1a8d0255efdb1ffac83324dbf", 204139],
+  ["Main.SLDASM", "4b4943d625b19ea7d6b7e88bed11055ef5b6a33bd7c270aa6a4f3a0474c457ed", 124331],
+  ["Movable support.SLDPRT", "47aa05636126a6fc9f9fb5ffa35ead35fd19146523f9bad7ead25175e31b4277", 199431],
+  ["RRING-C-INT-22.sldprt", "32578e12d54393ab3a335a1dfe9764b2362b1d7e007a0fc059f1da7a2bfbf8ba", 36569],
+  ["Revolver type transducer.SLDPRT", "cdf48ffe931ba60b542e41f1df0a125f0826d8e1b94bf42a4186ccd584079ef7", 79607],
+  ["SSM series load cell.SLDPRT", "7d086b35923b442d491503b618cc6522da61a812b9db04cdbb7d24fa5aa5bdb6", 187729],
+  ["Slide plate.SLDPRT", "0aa3a44769d3ec7e13ef2df008912018aae10ffec51e44a96a16481c00082388", 204127],
+  ["TIMING PULLEY_GPA40GT2060-B-H6.35.SLDPRT", "aca2c8dbcbe369ed8ce0a0156b69d0cc9633a19ddd57c885225a83209b0696ab", 430957],
+  ["TIMING PULLEY_GPA40GT2060-B-H8.SLDPRT", "de15173a84dfd59c98d12c329e3c66e980877f84bcace18269a32cde55147c91", 403137],
+  ["Threaded shaft collar.SLDPRT", "16d67cc9d5c1c8f1da224ba9caf3dfe5d2856ac30b2cdcbe721f71cc3483310a", 540749],
+  ["Working volume.SLDPRT", "2b9a029892d4a7bcd2d75113451d852e3a2ac0958b12f33780f5cc9c9e81ee40", 54333],
+  ["YSZ clamp.SLDASM", "1445ce59b06f6a022fbe29fc5b4330e2eb0cdb2448dd76b5ab6e60bfacc4d743", 26617086],
+  ["Yttria stabilized zirconia sample.SLDPRT", "63cd3494c7a6f1e1f8aa34cfb9d8f849e2695f8ee6293ee36c0285eca8ec5433", 52266],
+  ["adversarial_m6_mounting_holes_instead_of_m8.SLDASM", "1445ce59b06f6a022fbe29fc5b4330e2eb0cdb2448dd76b5ab6e60bfacc4d743", 26617086],
+  ["bearing_608.sldprt", "39e3b55e9fa5839dc9d2031e71d557622e2ba99c5150cdee868709d00966997e", 33524],
+  ["flat washer narrow_am.sldprt", "73ad1c98284c440209931137ab6b3bb0dd950ee4ec309708f0abb3043e7cd63b", 143848],
+  ["prevailing torque hex nut_am.sldprt", "7e0e864f33c168b26473b90ff298c822b537b17a5d7b9af463b9b925b7cbcbc9", 383784],
+  ["socket head cap screw_ai.sldprt", "7f02d896e69dde4cbc955703e3cd0b1857c429088f4de9dbfc8c1887c073f5d5", 510808],
+  ["socket head cap screw_am.sldprt", "6a4f24ae675c247e80ed3d403e7af82f4521806d2de64ea27a4af1d06a15392f", 1627875],
+  ["socket set screw cone point_am.sldprt", "a44270c1efa51349fecf4a252e0da7a879547f13bf0ef11ef8acb1991c81128e", 376573],
+  ["socket set screw cup point_am.sldprt", "cf5d3323c9b3956981aaee06bf25ba9f29d6f540c7f6d5907ac4acbd930b6359", 355755],
+  ["socket set screw flat point_am.sldprt", "d37272816277c2a662f6316da9910437753bfbb3df75b346d8218686cc0471b5", 233893],
+]
+
+[[metadata.assets]]
+path = "examples/adversarial_tall_boxy_guard_not_low_profile"
+url = "https://openaievalsetub0ktk.blob.core.windows.net/assets/SolidWorks/16_nanoindenter_stage/examples/adversarial_tall_boxy_guard_not_low_profile"
+sha256 = "0a77b0f65c624064229c1eac5e6ac73b6325346e725526783b53ec8ee8dca39c"
+bytes = 105880480
+files = 49
+manifest = [
+  ["3564N14_Carbon Steel Bearing Retaining Nut.SLDPRT", "f4bff01cee053330692705bfa19000a0b10c2c0eda3fd03498b101b091b0ee73", 389199],
+  ["6627T116_Stepper Motor.SLDPRT", "5e9714618f2ac3b04326b31ae4a50f0c036d5c401687f63b1e13bb0f27eb3468", 22883629],
+  ["91292A111_18-8 Stainless Steel Socket Head Screw.SLDPRT", "067f7614762035637fd7f19e4f310283b1ce493e243d73cccc79dcd8dc832ee2", 626983],
+  ["96445K157_Belleville Disc Spring.SLDPRT", "4306cefaac5d8cb43f26f0ea25747a079718d9fbbe0dba3a4fbd40776c75a1cd", 147994],
+  ["9731N39_Clamping Two-Piece Shaft Collar.SLDPRT", "719d18f502e64b4e132eb0214f15602f90d1caea3cd58df3b9d3d5008a7a7ddc", 1375386],
+  ["Amazon NEMA23 support.SLDPRT", "6d1f1d9c96bc3cc84ed11aac791750769b28ce40a0bcf60db033226b01b8e58d", 117055],
+  ["Amazon Shaft collar.SLDPRT", "417cbb0963105b80f43ab48a49cdc8913a69d2f426a2f85e9727a7886a8a8cbd", 91056],
+  ["BGBK608DD-20.sldasm", "f6dc92a6fb5c19831bcd2f0b06b83ff9d8524a9c4ff151644146d41af5a3380b", 138384],
+  ["BGBK608DD-20_h.sldprt", "83b0b2815b028eaac15d3d00634b7d246faf1df82ab22f105b95ede850d5471f", 35121],
+  ["BGHFS608DD-35.SLDASM", "d84d4cbadce47bdd67f965f6ea3d18e93ab180cda7a9d3970f4d777195297ce5", 97041],
+  ["BGHFS608DD-35_h.sldprt", "32a73c68aedf81b395631e06629dee72ae720b53eaf841d111f310ad2cce309e", 38559],
+  ["Belt Guard.SLDPRT", "70c3b55ac16fcc7cfd8e52b45085059a4e257f78b2c14dd0c4c643e6a592cf0a", 268854],
+  ["Belt Guard_Independent.SLDPRT", "0a43f5ab33fc4cb3badcf1e9b6e7f8323b13b691f4f5a70b7112a083cdd4f125", 255721],
+  ["Brass separator.SLDPRT", "c462d72b3b2d4080ff14b1704f0c0b883c481d0a482e5ca291eabcc8b9a9b37e", 87093],
+  ["Bridge-type transducer.SLDPRT", "bbf582896169b024412a2e1765a483961e5eba8bba59846d50478054e9893207", 359378],
+  ["CS stack.SLDASM", "5b24daf6796ee211b1ce11749c5511d870c7129be05ee5e8faf2296179cfdab6", 136163],
+  ["Compression clamp V1.02.SLDPRT", "32084766b3a64ecb6fe58b4ea631e9f4691f162be8e3f4decfcf4aa8b08ce67c", 131211],
+  ["Custom Fine Thread lead screw nut.SLDPRT", "aa31e4dc824015b1cea70b70ab58434a9d2ee3357b051a202f229f335791955f", 2086557],
+  ["Custom fine thread mirrored lead screw.SLDPRT", "5cc5a7d21438cd9cda6160cdcf3ba99630edc7e8dc9806c645e6a96ee908a27e", 4053668],
+  ["Custom input worm gear_merge.SLDPRT", "eee4a9edaf7ea0cf1580e6d0abc53621354829b858acd6e75064996ce9d0c509", 5863874],
+  ["Custom input worm.SLDPRT", "13fecb3dd66fdedddd12ff51cb67e345b7ff09806875eb20f068b8369bd75a55", 1078036],
+  ["Custom output worm gear.SLDPRT", "62e572a675de87a5fd871e1015c122bdda731c8773bdbe786ab993b6607d83db", 3588463],
+  ["Custom worm_merge.SLDPRT", "cfececaffafca1f5d9b45b4582a9d0dfdb5e3a109a2c7ecea2c6143802edffab", 1851502],
+  ["FLANGE_GPA40GT2060-B-H6.35.SLDPRT", "1cff49b7c4e5aa85b40777f05a764358695ada5c894af76a3f26456e2460d5e4", 90433],
+  ["FLANGE_GPA40GT2060-B-H8.SLDPRT", "025c8842c5b6e73c8d98171128fd2e6b6eb93e73556d0dd6268c7d7fa0171a42", 89736],
+  ["Fixture.SLDPRT", "909a6f850fdfadcf59dee92c349adf812d2691b06bb3c811266006fac415d6cb", 271142],
+  ["GPA40GT2060-B-H6.35.SLDASM", "8051f17327d406994d68144f86a57445506ab60e8aa87d81f33df831f27fb01e", 204013],
+  ["GPA40GT2060-B-H8.SLDASM", "d5cb9ea3a8fb9b23a0aea204d3582bc0da7096c1a8d0255efdb1ffac83324dbf", 204139],
+  ["Main.SLDASM", "4b4943d625b19ea7d6b7e88bed11055ef5b6a33bd7c270aa6a4f3a0474c457ed", 124331],
+  ["Movable support.SLDPRT", "47aa05636126a6fc9f9fb5ffa35ead35fd19146523f9bad7ead25175e31b4277", 199431],
+  ["RRING-C-INT-22.sldprt", "32578e12d54393ab3a335a1dfe9764b2362b1d7e007a0fc059f1da7a2bfbf8ba", 36569],
+  ["Revolver type transducer.SLDPRT", "cdf48ffe931ba60b542e41f1df0a125f0826d8e1b94bf42a4186ccd584079ef7", 79607],
+  ["SSM series load cell.SLDPRT", "7d086b35923b442d491503b618cc6522da61a812b9db04cdbb7d24fa5aa5bdb6", 187729],
+  ["Slide plate.SLDPRT", "0aa3a44769d3ec7e13ef2df008912018aae10ffec51e44a96a16481c00082388", 204127],
+  ["TIMING PULLEY_GPA40GT2060-B-H6.35.SLDPRT", "aca2c8dbcbe369ed8ce0a0156b69d0cc9633a19ddd57c885225a83209b0696ab", 430957],
+  ["TIMING PULLEY_GPA40GT2060-B-H8.SLDPRT", "de15173a84dfd59c98d12c329e3c66e980877f84bcace18269a32cde55147c91", 403137],
+  ["Threaded shaft collar.SLDPRT", "16d67cc9d5c1c8f1da224ba9caf3dfe5d2856ac30b2cdcbe721f71cc3483310a", 540749],
+  ["Working volume.SLDPRT", "2b9a029892d4a7bcd2d75113451d852e3a2ac0958b12f33780f5cc9c9e81ee40", 54333],
+  ["YSZ clamp.SLDASM", "b8be97c8f4f1125948c50b5ed39de05df3bed5effec34fb4b14218c636b5b96c", 26670397],
+  ["Yttria stabilized zirconia sample.SLDPRT", "63cd3494c7a6f1e1f8aa34cfb9d8f849e2695f8ee6293ee36c0285eca8ec5433", 52266],
+  ["adversarial_tall_boxy_guard_not_low_profile.SLDASM", "b8be97c8f4f1125948c50b5ed39de05df3bed5effec34fb4b14218c636b5b96c", 26670397],
+  ["bearing_608.sldprt", "39e3b55e9fa5839dc9d2031e71d557622e2ba99c5150cdee868709d00966997e", 33524],
+  ["flat washer narrow_am.sldprt", "73ad1c98284c440209931137ab6b3bb0dd950ee4ec309708f0abb3043e7cd63b", 143848],
+  ["prevailing torque hex nut_am.sldprt", "7e0e864f33c168b26473b90ff298c822b537b17a5d7b9af463b9b925b7cbcbc9", 383784],
+  ["socket head cap screw_ai.sldprt", "7f02d896e69dde4cbc955703e3cd0b1857c429088f4de9dbfc8c1887c073f5d5", 510808],
+  ["socket head cap screw_am.sldprt", "6a4f24ae675c247e80ed3d403e7af82f4521806d2de64ea27a4af1d06a15392f", 1627875],
+  ["socket set screw cone point_am.sldprt", "a44270c1efa51349fecf4a252e0da7a879547f13bf0ef11ef8acb1991c81128e", 376573],
+  ["socket set screw cup point_am.sldprt", "cf5d3323c9b3956981aaee06bf25ba9f29d6f540c7f6d5907ac4acbd930b6359", 355755],
+  ["socket set screw flat point_am.sldprt", "d37272816277c2a662f6316da9910437753bfbb3df75b346d8218686cc0471b5", 233893],
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[verifier.env]
+
+[agent]
+
+[environment]
+os = "windows"
+
+[environment.env]
+
+[solution.env]
