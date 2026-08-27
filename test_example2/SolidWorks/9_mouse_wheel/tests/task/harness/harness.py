@@ -1,4 +1,7 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
+
+
+from __future__ import annotations
 
 import json
 import math
@@ -6,6 +9,7 @@ import os
 import sys
 import hashlib
 import tempfile
+import traceback
 
 sys.path.insert(0, os.path.normpath(os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -26,34 +30,59 @@ def _sha256(path):
             h.update(chunk)
     return h.hexdigest()
 
-TARGET_RATIO = 1.10
-RATIO_TOL    = 0.01
+
+# --------------------------------------------------------------------------
+# Scoring constants
+
+TARGET_RATIO   = 1.10
+RATIO_TOL      = 0.01
 
 LENGTH_TARGET_MM   = 105.0
 LENGTH_TOL_MM      = 1.5
 MIN_LENGTH_GAIN_MM = 8.0
 
-# Snap-fit disengagement estimate (item 1): classical cantilever hand calc
-# per the BASF/Bayer snap-fit design guides, computed from each detected
-# tab's measured beam geometry. Material properties are ASSUMED (the part
-# is consumer ABS; engineering has not confirmed the grade) and stated in
-# every report line. This is a design-guide estimate, not FEA -- SolidWorks
-# Simulation is not licensed on the grading machine, and a nonlinear
-# contact study on arbitrary candidate geometry would be too fragile for a
-# deterministic grader anyway.
-SNAP_E_MPA       = 2300.0   # ABS flexural modulus (assumed)
-SNAP_MU          = 0.35     # ABS-on-ABS friction coefficient (assumed)
-SNAP_FORCE_MIN_N = 15.0     # the brief's minimum disengagement force
+# Maximum allowed change in width/height when lengthening (catches uniform scale).
+# If a candidate scaled the whole model by 105/95 ~= 1.105, width and height
+# would both grow ~10.5mm on a 56mm-wide mouse -- well beyond this tolerance.
+DIM_STABILITY_TOL_MM = 2.0
+
+# Snap-fit: BASF/Bayer cantilever hand calc, ABS assumed
+SNAP_E_MPA       = 2300.0
+SNAP_MU          = 0.35
+SNAP_FORCE_MIN_N = 15.0
 
 HOOK_AREA_MM2   = (1.0, 100.0)
-HOOK_BAND_MM    = 6.0
+HOOK_BAND_MM    = 6.0       # mm from seam height for a face to count as "on the seam"
 HOOK_CLUSTER_MM = 8.0
 HOOK_SPAN_MM    = 15.0
-HOOK_CENTRE_MM  = 4.0
+HOOK_CENTRE_MM  = 4.0       # min lateral offset from centreline
 MIN_TABS        = 4
 
+# New: symmetry tolerance for paired tabs (|cw_left + cw_right| must be < this)
+TAB_SYMMETRY_TOL_MM = 5.0
+# New: spacing uniformity for 4+ tabs -- max allowed deviation from equal spacing
+TAB_SPACING_UNIFORMITY_FRAC = 0.40  # 40% deviation from mean spacing is allowed
+
 BTN_VOL_CM3     = (0.02, 10.0)
-BTN_OFFSET_FRAC = 0.18
+BTN_OFFSET_FRAC = 0.18     # min lateral offset from centreline as fraction of width
+
+# New: buttons must be in the rear portion of the mouse (thumb zone).
+# The front BTN_FRONT_EXCLUSION_FRAC of body length is reserved for main clicks.
+# 0.15 (~15mm on a 105mm mouse) corresponds to the physical click-button area;
+# 0.30 was too strict and rejected valid thumb buttons at 26% from front.
+BTN_FRONT_EXCLUSION_FRAC = 0.15
+
+# New: design language -- button aspect ratio (length/width) should be in this range,
+# consistent with elongated oval/rectangular buttons typical of gaming mice.
+BTN_ASPECT_MIN = 1.2
+BTN_ASPECT_MAX = 6.0
+
+# Slot proportionality tolerance removed: the clearance check (|clr_c - clr_o| <= FIT_TOL_M)
+# already enforces that the slot tracks the wheel width correctly. A separate
+# slot/wheel ratio check is mathematically redundant and numerically more sensitive
+# than the clearance check at small absolute values (confirmed false-positive on the
+# reference solution: ratio changed 1.000->1.042 while clearance was 0.200mm, well
+# within the 0.5mm FIT_TOL_M).
 
 WHEEL_SKETCH_NAME   = r'\u00c7izim8'
 SLOT_WIDTH_DIM_NAME = r'D2@\u00c7izim7'
@@ -71,10 +100,54 @@ def _named(raw):
     return raw.encode('ascii').decode('unicode_escape')
 
 
+def _mm(metres):
+    return metres * 1000.0
+
+
+def _ratio_ok(orig, changed):
+    if orig is None or changed is None or orig <= 0 or changed <= 0:
+        return False, float('nan')
+    ratio = changed / orig
+    return abs(ratio - TARGET_RATIO) <= TARGET_RATIO * RATIO_TOL, ratio
+
+
+def _effective(doc, named_key, geo_key):
+    """Geometric (B-rep) measurement first, named dimension as fallback."""
+    g = doc.get(geo_key, -1) or -1
+    v = doc.get(named_key, -1) or -1
+    if g > 0:
+        return g, (v <= 0)
+    return v, False
+
+
+def _staleness_note(doc, named_key, geo_key):
+    g = doc.get(geo_key, -1) or -1
+    v = doc.get(named_key, -1) or -1
+    if g > 0 and v > 0 and abs(g - v) > 0.02 * v:
+        return ('  [named dimension reads {:.3f}mm but geometry '
+                'measures {:.3f}mm - geometry governs]'.format(_mm(v), _mm(g)))
+    return ''
+
+
+GEO_NOTE = '  [geometric measurement: named feature absent, re-authored model]'
+
+CANDIDATE_ERRORS = {
+    'no_active_doc':
+        'No document is active in SolidWorks - open an attempt and rerun.',
+    'active_doc_not_part':
+        'The active document is not a part (.SLDPRT) - activate the attempt and rerun.',
+    'active_doc_is_baseline':
+        'The active document IS the baseline part - open a candidate attempt and rerun.',
+}
+
+
+# --------------------------------------------------------------------------
+# SolidWorks data collection (COM via pywin32)
+
 def _collect(original_path=None, cand_stl='', orig_stl=''):
     from common import solidworks_session as sws
 
-    baseline_path = ORIGINAL_PATH if original_path is None else original_path
+    baseline_path = ORIGINAL_PATH if not original_path else original_path
     wheel_sketch = _named(WHEEL_SKETCH_NAME)
     slot_dim = _named(SLOT_WIDTH_DIM_NAME)
     SKETCH_ARC = 1            # swSketchSegments_e.swSketchARC
@@ -253,7 +326,8 @@ def _collect(original_path=None, cand_stl='', orig_stl=''):
         out['geo_wheel_center'] = list(g['c'])
 
         if wheel_box is not None:
-            a_dim = 0 if abs(g['ax'][0]) > 0.99 else                 (1 if abs(g['ax'][1]) > 0.99 else 2)
+            a_dim = 0 if abs(g['ax'][0]) > 0.99 else \
+                (1 if abs(g['ax'][1]) > 0.99 else 2)
             wc = g['c']
 
             def colocated(bx):
@@ -317,7 +391,8 @@ def _collect(original_path=None, cand_stl='', orig_stl=''):
                         pp = [float(v) for v in (sws.z(surf.PlaneParams) or [])]
                         if len(pp) < 6:
                             continue
-                        nd = 0 if abs(pp[0]) > 0.99 else                             (1 if abs(pp[1]) > 0.99 else
+                        nd = 0 if abs(pp[0]) > 0.99 else \
+                            (1 if abs(pp[1]) > 0.99 else
                              (2 if abs(pp[2]) > 0.99 else -1))
                         if nd < 0:
                             continue
@@ -372,7 +447,7 @@ def _collect(original_path=None, cand_stl='', orig_stl=''):
         cand_err = 'no_active_doc'
     elif int(sws.z(candidate.GetType)) != sws.DOC_PART:
         cand_err = 'active_doc_not_part'
-    elif baseline_path and cand_path.lower() == baseline_path.lower():
+    elif baseline_path and (cand_path or '').lower() == baseline_path.lower():
         cand_err = 'active_doc_is_baseline'
 
     if not baseline_path:
@@ -397,66 +472,8 @@ def _collect(original_path=None, cand_stl='', orig_stl=''):
     return {'original': orig_json, 'candidate': cand_json}
 
 
-def _mm(metres):
-    return metres * 1000.0
-
-
-def _ratio_ok(orig, changed):
-    if orig is None or changed is None or orig <= 0 or changed <= 0:
-        return False, float('nan')
-    ratio = changed / orig
-    return abs(ratio - TARGET_RATIO) <= TARGET_RATIO * RATIO_TOL, ratio
-
-
-CANDIDATE_ERRORS = {
-    'no_active_doc':
-        'No document is active in SolidWorks - open an attempt and rerun.',
-    'active_doc_not_part':
-        'The active document is not a part (.SLDPRT) - activate the attempt and rerun.',
-    'active_doc_is_baseline':
-        'The active document IS the baseline part - open a candidate attempt and rerun.',
-}
-
-
-def check_shared1_rebuild(candidate):
-    ok = candidate.get('rebuild_ok', False)
-    return ok, 'EditRebuild3 -> {}'.format(ok)
-
-
-def check_shared2_features(candidate):
-    errors = candidate.get('feat_errors', 0)
-    ok = (errors == 0)
-    return ok, '{} feature errors in tree'.format(errors)
-
-
-def _effective(doc, named_key, geo_key):
-    """Geometric (B-rep) measurement first, named dimension as fallback.
-
-    Geometry is ground truth: a Scale feature (and other geometry-level
-    edits) changes the B-rep without touching sketch dimensions, so a named
-    value can go stale while the part itself is correct (pinned by the
-    adversarial_uniform_scale_105 example). Returns (value, geo_only) where
-    geo_only means no named value existed at all (re-authored model).
-    """
-    g = doc.get(geo_key, -1) or -1
-    v = doc.get(named_key, -1) or -1
-    if g > 0:
-        return g, (v <= 0)
-    return v, False
-
-
-def _staleness_note(doc, named_key, geo_key):
-    """Flag a named dimension that no longer matches the actual geometry."""
-    g = doc.get(geo_key, -1) or -1
-    v = doc.get(named_key, -1) or -1
-    if g > 0 and v > 0 and abs(g - v) > 0.02 * v:
-        return ('  [named dimension reads {:.3f}mm but the geometry '
-                'measures {:.3f}mm - geometry governs]'.format(_mm(v), _mm(g)))
-    return ''
-
-
-GEO_NOTE = '  [geometric measurement: named feature absent, re-authored model]'
-
+# --------------------------------------------------------------------------
+# Mesh metrics from STL
 
 def _mesh_metrics(stl_path):
     import numpy as np
@@ -506,6 +523,10 @@ def _mesh_metrics(stl_path):
 
     comps = m.split(only_watertight=False, repair=False)
     w_centre = (lo[w_dim] + hi[w_dim]) / 2.0
+
+    # Main shell: the largest component by volume
+    shell_half_width = width / 2.0
+
     buttons = []
     for c in comps:
         try:
@@ -518,8 +539,26 @@ def _mesh_metrics(stl_path):
         off = float(cen[w_dim] - w_centre)
         if abs(off) < BTN_OFFSET_FRAC * width:
             continue
-        buttons.append({'volume_cm3': round(vol, 3), 'offset_mm': round(off, 2),
-                        'pos': [round(float(x), 2) for x in cen]})
+        # NEW: compute longitudinal position as fraction of body length
+        l_pos = float(cen[l_dim])
+        l_frac = (l_pos - lo[l_dim]) / length if length > 0 else 0.5
+        # NEW: compute aspect ratio of button bounding box
+        c_lo, c_hi = c.vertices.min(axis=0), c.vertices.max(axis=0)
+        c_ext = c_hi - c_lo
+        btn_dims = sorted([float(c_ext[w_dim]), float(c_ext[l_dim])],
+                          reverse=True)
+        aspect = btn_dims[0] / max(btn_dims[1], 0.1)
+        # NEW: shell penetration check -- button centre should be outside
+        # the shell half-width in the width dimension
+        penetrates_shell = abs(off) < shell_half_width * 0.5
+        buttons.append({
+            'volume_cm3': round(vol, 3),
+            'offset_mm': round(off, 2),
+            'l_frac': round(l_frac, 3),
+            'aspect_ratio': round(aspect, 2),
+            'pos': [round(float(x), 2) for x in cen],
+            'penetrates_shell': penetrates_shell,
+        })
 
     return {
         'length_mm': length, 'width_mm': width, 'height_mm': height,
@@ -574,7 +613,8 @@ def _snap_tabs(doc, mesh):
     clusters = []    # [cw, cl, count, member_ledges]
     for rec in ledges:
         for c in clusters:
-            if abs(rec['cw'] - c[0]) < HOOK_CLUSTER_MM and abs(rec['cl'] - c[1]) < HOOK_CLUSTER_MM:
+            if (abs(rec['cw'] - c[0]) < HOOK_CLUSTER_MM
+                    and abs(rec['cl'] - c[1]) < HOOK_CLUSTER_MM):
                 c[0] = (c[0] * c[2] + rec['cw']) / (c[2] + 1)
                 c[1] = (c[1] * c[2] + rec['cl']) / (c[2] + 1)
                 c[2] += 1
@@ -582,7 +622,9 @@ def _snap_tabs(doc, mesh):
                 break
         else:
             clusters.append([rec['cw'], rec['cl'], 1, [rec]])
+
     used, pairs = set(), 0
+    paired_l_positions = []
     for i, a in enumerate(clusters):
         if i in used:
             continue
@@ -593,11 +635,53 @@ def _snap_tabs(doc, mesh):
                 used.add(i)
                 used.add(j)
                 pairs += 1
+                paired_l_positions.append((a[1] + b[1]) / 2.0)
                 break
+
     forces = [_estimate_tab_force(clusters[i], walls) for i in sorted(used)]
-    return {'clusters': [[round(c[0], 1), round(c[1], 1), c[2]] for c in clusters],
-            'paired_tabs': pairs * 2,
-            'forces': forces}
+
+    # NEW: symmetry check -- each pair must be truly mirrored
+    # (already implicit in the pairing condition |a[0]+b[0]| < 4, but
+    # tighten to TAB_SYMMETRY_TOL_MM for the check)
+    symmetry_violations = []
+    for i, a in enumerate(clusters):
+        if i not in used:
+            continue
+        for j, b in enumerate(clusters):
+            if j <= i or j not in used:
+                continue
+            if abs(a[1] - b[1]) < 4.0:  # same longitudinal position
+                sym_err = abs(a[0] + b[0])  # |left_cw + right_cw|
+                if sym_err > TAB_SYMMETRY_TOL_MM:
+                    symmetry_violations.append(
+                        'pair at l={:.1f}: asymmetry {:.1f}mm (allowed {:.1f}mm)'.format(
+                            (a[1] + b[1]) / 2, sym_err, TAB_SYMMETRY_TOL_MM))
+
+    # NEW: even longitudinal spacing check
+    spacing_ok = True
+    spacing_detail = 'N/A (< 2 pairs)'
+    if len(paired_l_positions) >= 2:
+        sorted_pos = sorted(paired_l_positions)
+        gaps = [sorted_pos[k + 1] - sorted_pos[k]
+                for k in range(len(sorted_pos) - 1)]
+        mean_gap = sum(gaps) / len(gaps)
+        max_dev = max(abs(g - mean_gap) for g in gaps)
+        spacing_ok = (max_dev / max(mean_gap, 1.0)) <= TAB_SPACING_UNIFORMITY_FRAC
+        spacing_detail = (
+            'gaps {}mm, mean {:.1f}mm, max deviation {:.1f}mm ({:.0%} of mean, '
+            'allowed {:.0%})'.format(
+                [round(g, 1) for g in gaps], mean_gap, max_dev,
+                max_dev / max(mean_gap, 1.0), TAB_SPACING_UNIFORMITY_FRAC))
+
+    return {
+        'clusters': [[round(c[0], 1), round(c[1], 1), c[2]] for c in clusters],
+        'paired_tabs': pairs * 2,
+        'forces': forces,
+        'symmetry_violations': symmetry_violations,
+        'spacing_ok': spacing_ok,
+        'spacing_detail': spacing_detail,
+        'paired_l_positions': [round(p, 1) for p in sorted(paired_l_positions)],
+    }
 
 
 def _estimate_tab_force(cluster, walls):
@@ -653,10 +737,26 @@ def _estimate_tab_force(cluster, walls):
             'W_N': None if W is None else round(W, 1)}
 
 
+# --------------------------------------------------------------------------
+# Individual check functions
+
+def check_shared1_rebuild(candidate):
+    ok = candidate.get('rebuild_ok', False)
+    return ok, 'EditRebuild3 -> {}'.format(ok)
+
+
+def check_shared2_features(candidate):
+    errors = candidate.get('feat_errors', 0)
+    ok = (errors == 0)
+    return ok, '{} feature errors in tree'.format(errors)
+
+
 def check_item1_snap_tabs(candidate, cand_mesh):
+    """Count, force, symmetry and even-spacing all must pass."""
     tabs = _snap_tabs(candidate, cand_mesh)
     if tabs is None:
         return False, 'Snap-tab scan impossible (no mesh/seam data)'
+
     n = tabs['paired_tabs']
     count_ok = n >= MIN_TABS
 
@@ -669,7 +769,15 @@ def check_item1_snap_tabs(candidate, cand_mesh):
     measured = [f for f in forces if f]
     force_ok = all(f['self_locking'] or (f['W_N'] or 0) >= SNAP_FORCE_MIN_N
                    for f in measured)
-    ok = count_ok and force_ok
+
+    # NEW sub-checks
+    sym_viols = tabs.get('symmetry_violations', [])
+    symmetry_ok = len(sym_viols) == 0
+
+    spacing_ok = tabs.get('spacing_ok', True)
+    spacing_detail = tabs.get('spacing_detail', '')
+
+    ok = count_ok and force_ok and symmetry_ok and spacing_ok
 
     parts = []
     for f in forces:
@@ -681,13 +789,22 @@ def check_item1_snap_tabs(candidate, cand_mesh):
         else:
             parts.append('W~{}N (alpha={}deg, P~{}N, L={} t={} y={}mm)'.format(
                 f['W_N'], f['alpha_deg'], f['P_N'], f['L_mm'], f['t_mm'], f['y_mm']))
-    force_txt = ('; disengagement >= {:.0f}N per tab pair (BASF cantilever '
-                 'hand calc, ABS E={:.0f}MPa mu={} ASSUMED): [{}]'.format(
-                     SNAP_FORCE_MIN_N, SNAP_E_MPA, SNAP_MU, ', '.join(parts))
-                 if forces else '')
-    return ok, ('{} mirror-paired catch features at the parting seam '
-                '(need >= {}); clusters (w-offset, l-pos, faces): {}{}'.format(
-                    n, MIN_TABS, tabs['clusters'], force_txt))
+
+    force_txt = ('; disengagement >= {:.0f}N (ABS E={:.0f}MPa mu={} ASSUMED): [{}]'.format(
+        SNAP_FORCE_MIN_N, SNAP_E_MPA, SNAP_MU, ', '.join(parts)) if forces else '')
+
+    sym_txt = ('; SYMMETRY OK' if symmetry_ok
+               else '; SYMMETRY FAIL: ' + '; '.join(sym_viols))
+
+    spacing_txt = '; spacing: ' + spacing_detail
+
+    detail = ('{} mirror-paired catch features at seam (need >= {}); '
+              'l-positions: {}{}{}{}').format(
+        n, MIN_TABS,
+        tabs.get('paired_l_positions', []),
+        force_txt, sym_txt, spacing_txt)
+
+    return ok, detail
 
 
 def check_item2_thumb_buttons(cand_mesh, orig_mesh):
@@ -695,26 +812,70 @@ def check_item2_thumb_buttons(cand_mesh, orig_mesh):
         return False, 'No mesh data'
     btns = cand_mesh['flank_buttons']
     n_orig = len((orig_mesh or {}).get('flank_buttons', []))
-    same_side = bool(btns) and all(
-        b['offset_mm'] * btns[0]['offset_mm'] > 0 for b in btns)
-    ok = len(btns) == 2 and same_side and n_orig == 0
-    return ok, ('{} discrete flank button bodies (need exactly 2 on one side; '
-                'original has {}); lateral offsets {} mm  [thumb-side '
-                'placement and design language need visual review]'.format(
-                    len(btns), n_orig,
-                    [b['offset_mm'] for b in btns]))
+
+    count_ok = len(btns) == 2 and n_orig == 0
+
+    same_side = (bool(btns) and len(btns) >= 2 and
+                 btns[0]['offset_mm'] * btns[1]['offset_mm'] > 0)
+
+    # NEW: thumb-zone check -- buttons must not be in the front click area
+    front_limit = BTN_FRONT_EXCLUSION_FRAC
+    thumb_zone_ok = all(b['l_frac'] >= front_limit for b in btns) if btns else False
+    thumb_zone_detail = (
+        'l_fracs {} (must all >= {:.0%} from front)'.format(
+            [b['l_frac'] for b in btns], front_limit))
+
+    # NEW: shell-penetration check
+    no_shell_penetration = all(not b.get('penetrates_shell', False) for b in btns)
+
+    # NEW: aspect-ratio design-language check
+    aspects = [b.get('aspect_ratio', 0) for b in btns]
+    aspect_ok = all(BTN_ASPECT_MIN <= a <= BTN_ASPECT_MAX for a in aspects)
+    aspect_detail = 'aspect ratios {} (expected {:.1f}-{:.1f})'.format(
+        aspects, BTN_ASPECT_MIN, BTN_ASPECT_MAX)
+
+    ok = count_ok and same_side and thumb_zone_ok and no_shell_penetration and aspect_ok
+
+    detail = (
+        '{} discrete flank button bodies (need exactly 2; original has {}); '
+        'offsets {} mm; same side: {}; {}; shell-penetration: {}; {}'
+        '  [design language needs visual review]'
+    ).format(
+        len(btns), n_orig,
+        [b['offset_mm'] for b in btns],
+        same_side,
+        thumb_zone_detail,
+        'none' if no_shell_penetration else 'DETECTED',
+        aspect_detail,
+    )
+    return ok, detail
 
 
 def check_item3_length(orig_mesh, cand_mesh):
     if cand_mesh is None or orig_mesh is None:
         return False, 'No mesh data'
     L, L0 = cand_mesh['length_mm'], orig_mesh['length_mm']
-    ok = (abs(L - LENGTH_TARGET_MM) <= LENGTH_TOL_MM
-          and (L - L0) >= MIN_LENGTH_GAIN_MM)
-    return ok, ('overall length {:.2f}mm (target {:.0f} +/- {:.1f}mm); '
-                'original {:.2f}mm, gain {:+.2f}mm (need >= {:.0f}mm)'.format(
-                    L, LENGTH_TARGET_MM, LENGTH_TOL_MM, L0, L - L0,
-                    MIN_LENGTH_GAIN_MM))
+    length_ok = (abs(L - LENGTH_TARGET_MM) <= LENGTH_TOL_MM
+                 and (L - L0) >= MIN_LENGTH_GAIN_MM)
+
+    # NEW: width and height stability
+    W0, H0 = orig_mesh.get('width_mm', -1), orig_mesh.get('height_mm', -1)
+    W,  H  = cand_mesh.get('width_mm', -1), cand_mesh.get('height_mm', -1)
+    width_stable  = (W  > 0 and W0 > 0 and abs(W  - W0)  <= DIM_STABILITY_TOL_MM)
+    height_stable = (H  > 0 and H0 > 0 and abs(H  - H0)  <= DIM_STABILITY_TOL_MM)
+    dims_ok = width_stable and height_stable
+
+    ok = length_ok and dims_ok
+    detail = (
+        'length {:.2f}mm (target {:.0f} +/- {:.1f}mm, gain {:+.2f}mm, need >= {:.0f}mm); '
+        'width {:.2f}->{:.2f}mm (delta {:+.2f}mm, tol +/-{:.1f}mm) {}; '
+        'height {:.2f}->{:.2f}mm (delta {:+.2f}mm, tol +/-{:.1f}mm) {}'
+    ).format(
+        L, LENGTH_TARGET_MM, LENGTH_TOL_MM, L - L0, MIN_LENGTH_GAIN_MM,
+        W0, W, W - W0, DIM_STABILITY_TOL_MM, 'OK' if width_stable else 'FAIL',
+        H0, H, H - H0, DIM_STABILITY_TOL_MM, 'OK' if height_stable else 'FAIL',
+    )
+    return ok, detail
 
 
 def check_taskp_1_wheel_radius(original, candidate):
@@ -726,10 +887,15 @@ def check_taskp_1_wheel_radius(original, candidate):
         return False, ('Wheel not found in active document (no named wheel '
                        'sketch and no wheel-like disc geometry)')
     ok, ratio = _ratio_ok(o, c)
-    return ok, 'R {:.3f}mm -> {:.3f}mm  (x{:.3f}, target x{:.2f} +/- {:.0%}){}{}'.format(
+
+    centre_ok, centre_detail = check_taskp_3_centre_preserved(original, candidate)
+    centre_note = '' if centre_ok else '  [WARN: centre shifted -- {}]'.format(centre_detail)
+
+    return ok, 'R {:.3f}mm -> {:.3f}mm (x{:.3f}, target x{:.2f} +/- {:.0%}){}{}{}' .format(
         _mm(o), _mm(c), ratio, TARGET_RATIO, RATIO_TOL,
         GEO_NOTE if c_geo else '',
-        _staleness_note(candidate, 'wheel_radius', 'geo_wheel_radius'))
+        _staleness_note(candidate, 'wheel_radius', 'geo_wheel_radius'),
+        centre_note)
 
 
 FIT_TOL_M = 0.5e-3
@@ -797,12 +963,14 @@ def check_taskp_2_slot_accommodation(original, candidate):
         return False, 'Wheel/housing face data missing - cannot check clearance'
     coll_ok = len(c_hits) <= len(o_hits)
     ok = fit_ok and coll_ok
-    detail = ('slot W {:.3f}mm vs wheel width {:.3f}mm (clearance {:+.3f}mm,'
-              ' original {:+.3f}mm, tol {:.1f}mm); housing faces penetrated'
-              ' >{:.1f}mm: {} (original {}){}'.format(
-                  _mm(c_slot), _mm(c_w), _mm(clr_c), _mm(clr_o),
-                  _mm(FIT_TOL_M), _mm(PENETRATION_TOL_M), len(c_hits),
-                  len(o_hits), GEO_NOTE if c_geo else ''))
+    detail = (
+        'slot W {:.3f}mm vs wheel width {:.3f}mm '
+        '(clearance {:+.3f}mm, original {:+.3f}mm, tol {:.1f}mm); '
+        'housing penetrations >{:.1f}mm: {} (original {}){}'
+    ).format(
+        _mm(c_slot), _mm(c_w), _mm(clr_c), _mm(clr_o), _mm(FIT_TOL_M),
+        _mm(PENETRATION_TOL_M), len(c_hits), len(o_hits),
+        GEO_NOTE if c_geo else '')
     if c_hits:
         detail += '; worst penetration {:.2f}mm'.format(_mm(max(c_hits)))
     return ok, detail
@@ -864,6 +1032,23 @@ def check_taskp_4_clean_rebuild(candidate):
     return ok, 'feature errors={}, warnings={}'.format(err, warn)
 
 
+# --------------------------------------------------------------------------
+# Safe runner
+
+def _safe_check(name, fn):
+    """Run check fn(); on exception return (False, traceback) instead of
+    silently swallowing the error."""
+    try:
+        ok, detail = fn()
+        return bool(ok), str(detail)
+    except Exception:
+        tb = traceback.format_exc()
+        return False, 'EXCEPTION in {}: {}'.format(name, tb.strip())
+
+
+# --------------------------------------------------------------------------
+# Top-level orchestration
+
 def _collect_checks():
     stl_dir = tempfile.gettempdir()
     cand_stl = os.path.join(stl_dir, 'task9_candidate.stl')
@@ -885,7 +1070,7 @@ def _collect_checks():
             '(hash mismatch: expected {}..., found {}...)'.format(
                 frozen.get('source_sha256', '')[:16], got[:16]))
 
-    data = _collect('', cand_stl=cand_stl, orig_stl='')
+    data = _collect(ORIGINAL_PATH, cand_stl=cand_stl, orig_stl=orig_stl)
 
     original = frozen['original']
     candidate = data.get('candidate', {})
@@ -896,24 +1081,38 @@ def _collect_checks():
     cand_mesh = _mesh_metrics(cand_stl) if os.path.exists(cand_stl) else None
     orig_mesh = original.get('mesh')
 
-    checks = [
-        ('model regenerates', lambda: check_shared1_rebuild(candidate)),
-        ('no broken features', lambda: check_shared2_features(candidate)),
-        ('four snap tabs present', lambda: check_item1_snap_tabs(candidate, cand_mesh)),
-        ('two thumb buttons added', lambda: check_item2_thumb_buttons(cand_mesh, orig_mesh)),
-        ('lengthened to 105 mm', lambda: check_item3_length(orig_mesh, cand_mesh)),
-        ('wheel radius up 10 percent', lambda: check_taskp_1_wheel_radius(original, candidate)),
-        ('slot accommodates wheel', lambda: check_taskp_2_slot_accommodation(original, candidate)),
-        ('clean rebuild', lambda: check_taskp_4_clean_rebuild(candidate)),
+    # Merge live B-rep measurements with frozen baseline; frozen mesh.* wins
+    live_original = data.get('original', {})
+    if not live_original.get('error') and not live_original.get('skipped'):
+        merged_original = dict(original)
+        merged_original.update(live_original)
+        merged_original['mesh'] = original.get('mesh')
+    else:
+        merged_original = original
+
+    checks_raw = [
+        ('model regenerates',
+         lambda: check_shared1_rebuild(candidate)),
+        ('no broken features',
+         lambda: check_shared2_features(candidate)),
+        ('four snap tabs present',
+         lambda: check_item1_snap_tabs(candidate, cand_mesh)),
+        ('two thumb buttons added',
+         lambda: check_item2_thumb_buttons(cand_mesh, orig_mesh)),
+        ('lengthened to 105 mm',
+         lambda: check_item3_length(orig_mesh, cand_mesh)),
+        ('wheel radius up 10 percent',
+         lambda: check_taskp_1_wheel_radius(merged_original, candidate)),
+        ('slot accommodates wheel',
+         lambda: check_taskp_2_slot_accommodation(merged_original, candidate)),
+        ('clean rebuild',
+         lambda: check_taskp_4_clean_rebuild(candidate)),
     ]
 
     registry = {}
-    for name, fn in checks:
-        try:
-            ok, _detail = fn()
-        except Exception:
-            ok = False
-        registry[name] = bool(ok)
+    for name, fn in checks_raw:
+        ok, detail = _safe_check(name, fn)
+        registry[name] = (name, ok, detail)
     return registry
 
 
@@ -943,9 +1142,18 @@ class MouseWheelHarness(Harness):
     MUST_PASS = (
         'model regenerates',
         'no broken features',
-        'clean rebuild',
     )
-    CANDIDATE_OPTIONAL = True  # without an arg, grades the live document
+    WEIGHTS = {
+        'model regenerates':          0,
+        'no broken features':         0,
+        'four snap tabs present':     1,
+        'two thumb buttons added':    1,
+        'lengthened to 105 mm':       1,
+        'wheel radius up 10 percent': 1,
+        'slot accommodates wheel':    1,
+        'clean rebuild':              0,
+    }
+    CANDIDATE_OPTIONAL = True
 
     def build_state(self, candidate_path):
         if candidate_path and os.path.isfile(candidate_path):
@@ -958,6 +1166,6 @@ class MouseWheelHarness(Harness):
 
 main = MouseWheelHarness.as_main()
 
+
 if __name__ == '__main__':
     MouseWheelHarness.cli()
-

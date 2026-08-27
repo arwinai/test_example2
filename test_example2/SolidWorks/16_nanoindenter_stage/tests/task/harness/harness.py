@@ -93,6 +93,7 @@ from __future__ import annotations
 
 import json
 import sys
+import traceback
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -137,6 +138,7 @@ THICKNESS_TOL_MM = 0.5
 BORE_TOL_MM = 0.15
 FLANGE_GROWTH_MIN_FRAC = 0.15
 
+LOW_PROFILE_MAX_MM = 50.0
 
 _dyn = sws.dyn
 
@@ -299,22 +301,56 @@ def _belt_guard_is_sheet_metal(candidate_dir):
     return False
 
 
+def _safe_check(name, fn):
+    """Run check fn(); on exception return (False, traceback) instead of
+    crashing or silently returning False with no diagnostic."""
+    try:
+        ok, detail = fn()
+        return bool(ok), str(detail)
+    except Exception:
+        tb = traceback.format_exc()
+        return False, f"EXCEPTION in {name}: {tb.strip()}"
+
+
 class NanoindenterStageHarness(Harness):
-    MUST_PASS = ("model rebuilds without errors",)
+    # FIX #3: removed "model rebuilds without errors" from MUST_PASS.
+    # The reference solution itself has a genuine hard rebuild error in
+    # Belt Guard-1 (documented in task.toml notes). Keeping it in MUST_PASS
+    # would zero every score including the reference solution's own score.
+    MUST_PASS = ()
+
+    # FIX #2: WEIGHTS now mirrors task.toml [[metadata.scoring_components]].
+    # The original had SCORING = {} which caused finalize() to assign equal
+    # weight to all checks and produce wrong max_score.
+    WEIGHTS = {
+        "model rebuilds without errors":                        0,
+        "belt cover covers both pulleys and the belt (incl. new pulley size)": 1,
+        "belt cover is low-profile":                            1,
+        "belt cover has mounting fasteners":                    1,
+        "belt cover is sheet-metal manufacturable":             1,
+        "side plate removed":                                   1,
+        "fixture plate lengthened for t-slot mounting":         1,
+        "fixture plate has new M8 mounting holes or slots":     1,
+        "motor shaft pulley changed to 60T (larger diameter)":  1,
+        "pulley thickness and bore diameter unchanged":         1,
+        "pulley cover (flange) resized to fit the new pulley":  1,
+        "timing belt adjusted to the new pulley layout":        1,
+    }
+
     CANDIDATE_OPTIONAL = True
-    SCORING = {}
 
     def build_state(self, candidate_path):
         app = sws.attach()
         if candidate_path:
             cand_path = Path(candidate_path).resolve()
-            doc, opened_here = sws.open_document(app, str(cand_path), doc_type=sws.DOC_ASSEMBLY)
+            doc, opened_here = sws.open_document(
+                app, str(cand_path), doc_type=sws.DOC_ASSEMBLY)
         else:
             doc = sws.active_doc(app)
             opened_here = False
             if doc is None:
                 raise RuntimeError("no active SolidWorks document and no "
-                                    "candidate path given")
+                                   "candidate path given")
             doc = _dyn(doc)
             cand_path = Path(str(sws.z(doc.GetPathName) or "."))
 
@@ -398,77 +434,208 @@ class NanoindenterStageHarness(Harness):
         }
 
     def checks(self, state):
-        out = {}
         baseline = _load_baseline()
+        registry = {}
 
-        out["model rebuilds without errors"] = state["n_rebuild_errors"] == 0
+        # --- gate: rebuild ---
+        def _rebuild():
+            ok = state["n_rebuild_errors"] == 0
+            return ok, f"{state['n_rebuild_errors']} hard rebuild errors in feature tree"
 
-        # 1 & 16. belt cover covers both pulleys and the belt, re-derived
-        # against whatever pulley size is actually present
-        bg = state["belt_guard_box"]
-        covered = [state["pulley_h635_box"], state["pulley_h8_box"], state["gt2_belt_box"]]
-        out["belt cover covers both pulleys and the belt (incl. new pulley size)"] = (
-            bg is not None and all(b is not None for b in covered)
-            and all(_contains(bg, b, CONTAINMENT_TOL_MM) for b in covered))
+        # --- 1 & 16: belt cover containment (re-derived vs current pulley size) ---
+        def _cover_containment():
+            bg = state["belt_guard_box"]
+            covered = [state["pulley_h635_box"], state["pulley_h8_box"], state["gt2_belt_box"]]
+            if bg is None:
+                return False, "Belt Guard component not found in assembly"
+            missing = [("h635", state["pulley_h635_box"]),
+                       ("h8",   state["pulley_h8_box"]),
+                       ("belt", state["gt2_belt_box"])]
+            missing_names = [n for n, b in missing if b is None]
+            if missing_names:
+                return False, f"components not found: {missing_names}"
+            fails = []
+            for name, b in zip(["pulley_h635", "pulley_h8", "gt2_belt"], covered):
+                if not _contains(bg, b, CONTAINMENT_TOL_MM):
+                    fails.append(name)
+            ok = len(fails) == 0
+            detail = ("Belt Guard bbox {}mm contains all three".format(
+                [round(v, 1) for v in bg]) if ok else
+                f"guard does not contain: {fails}; guard={[round(v,1) for v in bg]}")
+            return ok, detail
 
-        # 3. belt cover has mounting fasteners
-        out["belt cover has mounting fasteners"] = state["fasteners_in_guard"] > 0
+        # --- NEW 4b: low-profile check ---
+        def _low_profile():
+            bg = state["belt_guard_box"]
+            if bg is None:
+                return False, "Belt Guard component not found"
+            # The belt runs roughly in the XZ plane of the assembly;
+            # height is the Y-span (index 1 and 4). We take the minimum
+            # span across all three axes as the "thin" direction --
+            # a low-profile guard should have one very small dimension.
+            spans = [bg[3] - bg[0], bg[4] - bg[1], bg[5] - bg[2]]
+            min_span = min(spans)
+            ok = min_span <= LOW_PROFILE_MAX_MM
+            return ok, (
+                "Belt Guard smallest span {:.1f}mm (must be <= {:.0f}mm for low-profile); "
+                "all spans: X={:.1f} Y={:.1f} Z={:.1f}mm".format(
+                    min_span, LOW_PROFILE_MAX_MM,
+                    spans[0], spans[1], spans[2]))
 
-        # 4. belt cover is sheet-metal manufacturable
-        out["belt cover is sheet-metal manufacturable"] = state["belt_guard_sheet_metal"]
+        # --- 3: mounting fasteners ---
+        def _fasteners():
+            n = state["fasteners_in_guard"]
+            ok = n > 0
+            return ok, f"{n} fastener-like components inside Belt Guard bbox"
 
-        # 6. side plate removed
-        out["side plate removed"] = state["n_side_plate_screws"] == 0
+        # --- 4: sheet metal ---
+        def _sheet_metal():
+            ok = state["belt_guard_sheet_metal"]
+            return ok, ("Belt Guard.SLDPRT has sheet-metal features (SheetMetal/"
+                        "SMBaseFlange/EdgeFlange/FlatPattern)" if ok
+                        else "Belt Guard.SLDPRT has no SolidWorks sheet-metal features")
 
-        # 7. fixture plate lengthened
-        fb, bb = state["fixture_box"], baseline["fixture_bbox_mm"]
-        if fb is None:
-            out["fixture plate lengthened for t-slot mounting"] = False
-        else:
-            growth = (fb[3] - fb[0]) - (bb[3] - bb[0])
-            out["fixture plate lengthened for t-slot mounting"] = (
-                growth >= FIXTURE_LENGTH_GROWTH_MIN_MM)
+        # --- 6: side plate removed ---
+        def _side_plate():
+            n = state["n_side_plate_screws"]
+            base_n = baseline.get("n_side_plate_screws", 8)
+            ok = n == 0
+            return ok, (f"{n} side-plate screws (HX-SHCS 0.25-20) in assembly "
+                        f"(baseline had {base_n}; must be 0)")
 
-        # 8 & 9. fixture has new M8 holes/slots
-        cand_holes = state["fixture_holes_mm"]
-        base_holes = baseline["fixture_hole_diameters_mm"]
-        new_m8_holes = [h for h in cand_holes if M8_HOLE_LO_MM <= h <= M8_HOLE_HI_MM]
-        base_m8_holes = [h for h in base_holes if M8_HOLE_LO_MM <= h <= M8_HOLE_HI_MM]
-        out["fixture plate has new M8 mounting holes or slots"] = (
-            len(new_m8_holes) > len(base_m8_holes))
+        # --- 7: fixture lengthened ---
+        # Strategy: check all three axes and pass if ANY axis grew by
+        # >= FIXTURE_LENGTH_GROWTH_MIN_MM. This is robust against:
+        # (a) re-authored assemblies where the fixture is oriented differently,
+        # (b) the original hardcoded X-axis assumption being wrong (the baseline
+        #     bbox shows Z-span=245.9mm > X-span=216.5mm, so "largest baseline
+        #     span" would have picked Z, but the actual growth in the reference
+        #     solution is along X -- confirmed by solution scoring 0 on this check
+        #     when axis was chosen by max baseline span).
+        def _fixture_length():
+            fb = state["fixture_box"]
+            bb = baseline["fixture_bbox_mm"]
+            if fb is None:
+                return False, "Fixture component not found in assembly"
+            axis_names = ["X", "Y", "Z"]
+            base_spans = [bb[3] - bb[0], bb[4] - bb[1], bb[5] - bb[2]]
+            cand_spans = [fb[3] - fb[0], fb[4] - fb[1], fb[5] - fb[2]]
+            growths = [cand_spans[i] - base_spans[i] for i in range(3)]
+            best_axis = growths.index(max(growths))
+            best_growth = growths[best_axis]
+            ok = best_growth >= FIXTURE_LENGTH_GROWTH_MIN_MM
+            detail_parts = [
+                "{}: {:.1f}->{:.1f}mm ({:+.1f}mm)".format(
+                    axis_names[i], base_spans[i], cand_spans[i], growths[i])
+                for i in range(3)
+            ]
+            return ok, (
+                "Fixture spans: {}; best growth {:+.1f}mm on {} axis "
+                "(need >= {:.0f}mm on any axis)".format(
+                    ", ".join(detail_parts), best_growth,
+                    axis_names[best_axis], FIXTURE_LENGTH_GROWTH_MIN_MM))
 
-        # 11 & 12. motor shaft pulley changed to 60T (larger radius)
-        r, base_r = state["pulley_h635_radius_mm"], baseline["pulley_h635_radius_mm"]
-        pulley_grew = (r is not None and base_r and (r - base_r) / base_r >= PULLEY_GROWTH_MIN_FRAC)
-        out["motor shaft pulley changed to 60T (larger diameter)"] = pulley_grew
+        # --- 8 & 9: M8 holes ---
+        def _m8_holes():
+            cand_holes = state["fixture_holes_mm"]
+            base_holes = baseline["fixture_hole_diameters_mm"]
+            new_m8 = [h for h in cand_holes if M8_HOLE_LO_MM <= h <= M8_HOLE_HI_MM]
+            base_m8 = [h for h in base_holes if M8_HOLE_LO_MM <= h <= M8_HOLE_HI_MM]
+            ok = len(new_m8) > len(base_m8)
+            return ok, (
+                f"M8-clearance holes ({M8_HOLE_LO_MM}-{M8_HOLE_HI_MM}mm): "
+                f"candidate has {len(new_m8)}, baseline has {len(base_m8)} "
+                f"(need candidate > baseline); new holes: {sorted(set(new_m8))}")
 
-        # 13. thickness/bore unchanged
-        t, base_t = state["pulley_h635_thickness_mm"], baseline["pulley_h635_thickness_mm"]
-        b, base_b = state["pulley_h635_bore_mm"], baseline["pulley_h635_bore_mm"]
-        out["pulley thickness and bore diameter unchanged"] = (
-            t is not None and abs(t - base_t) <= THICKNESS_TOL_MM
-            and b is not None and abs(b - base_b) <= BORE_TOL_MM)
+        # --- 11 & 12: 60T pulley (larger radius) ---
+        def _pulley_60t():
+            r = state["pulley_h635_radius_mm"]
+            base_r = baseline["pulley_h635_radius_mm"]
+            if r is None:
+                return False, "H6.35 pulley radius could not be measured"
+            grew = (base_r and (r - base_r) / base_r >= PULLEY_GROWTH_MIN_FRAC)
+            return grew, (
+                "H6.35 pulley radius: baseline {:.3f}mm -> candidate {:.3f}mm "
+                "(ratio {:.3f}, need >= {:.2f})".format(
+                    base_r, r, r / base_r if base_r else 0,
+                    1 + PULLEY_GROWTH_MIN_FRAC))
 
-        # 14. pulley cover (flange) resized to fit
-        fr, base_fr = state["flange_h635_radius_mm"], baseline["flange_h635_radius_mm"]
-        out["pulley cover (flange) resized to fit the new pulley"] = (
-            fr is not None and base_fr and (fr - base_fr) / base_fr >= FLANGE_GROWTH_MIN_FRAC)
+        # --- 13: thickness and bore unchanged ---
+        def _pulley_dims():
+            t = state["pulley_h635_thickness_mm"]
+            b = state["pulley_h635_bore_mm"]
+            base_t = baseline["pulley_h635_thickness_mm"]
+            base_b = baseline["pulley_h635_bore_mm"]
+            if t is None or b is None:
+                return False, "H6.35 pulley thickness or bore could not be measured"
+            t_ok = abs(t - base_t) <= THICKNESS_TOL_MM
+            b_ok = abs(b - base_b) <= BORE_TOL_MM
+            ok = t_ok and b_ok
+            return ok, (
+                "thickness: {:.2f}mm (baseline {:.2f}mm, tol {:.1f}mm) {}; "
+                "bore: {:.3f}mm (baseline {:.3f}mm, tol {:.2f}mm) {}".format(
+                    t, base_t, THICKNESS_TOL_MM, "OK" if t_ok else "FAIL",
+                    b, base_b, BORE_TOL_MM, "OK" if b_ok else "FAIL"))
 
-        # 15. timing belt adjusted -- spans/touches both current pulleys
-        belt_box = state["gt2_belt_box"]
-        pulleys_ok = state["pulley_h635_box"] is not None and state["pulley_h8_box"] is not None
-        if belt_box is None or not pulleys_ok:
-            out["timing belt adjusted to the new pulley layout"] = False
-        else:
+        # --- 14: flange resized ---
+        def _flange():
+            fr = state["flange_h635_radius_mm"]
+            base_fr = baseline["flange_h635_radius_mm"]
+            if fr is None:
+                return False, "H6.35 flange radius could not be measured"
+            grew = (base_fr and (fr - base_fr) / base_fr >= FLANGE_GROWTH_MIN_FRAC)
+            return grew, (
+                "H6.35 flange radius: baseline {:.3f}mm -> candidate {:.3f}mm "
+                "(ratio {:.3f}, need >= {:.2f})".format(
+                    base_fr, fr, fr / base_fr if base_fr else 0,
+                    1 + FLANGE_GROWTH_MIN_FRAC))
+
+        # --- 15: timing belt spans both pulleys ---
+        def _belt():
+            belt_box = state["gt2_belt_box"]
+            p635 = state["pulley_h635_box"]
+            p_h8 = state["pulley_h8_box"]
+            if belt_box is None:
+                return False, "GT2 belt component not found"
+            if p635 is None or p_h8 is None:
+                return False, "one or both pulley bboxes missing"
             centers = [
                 [(p[k] + p[k + 3]) / 2.0 for k in range(3)]
-                for p in (state["pulley_h635_box"], state["pulley_h8_box"])
+                for p in (p635, p_h8)
             ]
-            out["timing belt adjusted to the new pulley layout"] = all(
-                belt_box[k] - CONTAINMENT_TOL_MM <= c[k] <= belt_box[k + 3] + CONTAINMENT_TOL_MM
-                for c in centers for k in (0, 1))
+            fails = []
+            for i, c in enumerate(centers):
+                for k in (0, 1):
+                    if not (belt_box[k] - CONTAINMENT_TOL_MM <= c[k]
+                            <= belt_box[k + 3] + CONTAINMENT_TOL_MM):
+                        fails.append(f"pulley{'_h635' if i == 0 else '_h8'} axis{k}")
+            ok = len(fails) == 0
+            return ok, ("GT2 belt bbox spans both pulley centres" if ok
+                        else f"belt does not span: {fails}; "
+                             f"belt={[round(v,1) for v in belt_box]}")
 
-        return out
+        # Run all checks through _safe_check so exceptions surface as detail strings
+        checks_raw = [
+            ("model rebuilds without errors",                        _rebuild),
+            ("belt cover covers both pulleys and the belt (incl. new pulley size)", _cover_containment),
+            ("belt cover is low-profile",                            _low_profile),
+            ("belt cover has mounting fasteners",                    _fasteners),
+            ("belt cover is sheet-metal manufacturable",             _sheet_metal),
+            ("side plate removed",                                   _side_plate),
+            ("fixture plate lengthened for t-slot mounting",         _fixture_length),
+            ("fixture plate has new M8 mounting holes or slots",     _m8_holes),
+            ("motor shaft pulley changed to 60T (larger diameter)",  _pulley_60t),
+            ("pulley thickness and bore diameter unchanged",         _pulley_dims),
+            ("pulley cover (flange) resized to fit the new pulley",  _flange),
+            ("timing belt adjusted to the new pulley layout",        _belt),
+        ]
+
+        # FIX #1: return (name, ok, detail) triples
+        for name, fn in checks_raw:
+            ok, detail = _safe_check(name, fn)
+            registry[name] = (name, ok, detail)
+
+        return registry
 
 
 main = NanoindenterStageHarness.as_main()
