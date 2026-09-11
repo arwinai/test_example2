@@ -9,7 +9,7 @@ A grading harness for each task, implemented appropriately for that task, that:
 - **passes the reference**: `solution/solution.SLDPRT` (mouse) and `solution/solution.SLDASM` (stage) score full marks;
 - **fails the adversarials**: every entry under `examples/` loses points on the component(s) it actually gets wrong, and only those.
 
-"Implemented appropriately" means the harness grades the geometry the instruction asks for, not names, feature-tree structure, or coincidences of the reference file, so that a candidate who solves the task a different way still scores full marks. Keep `[[metadata.scoring_components]]` in each `task.toml` in sync with whatever components your harness emits, and include a short note on what you changed and why, plus the score envelopes from running it over the reference and every example if you have access to SolidWorks.
+"Implemented appropriately" means the harness grades the geometry the instruction asks for, not names, feature-tree structure, or coincidences of the reference file, so that a candidate who solves the task a different way still scores full marks. Include a short note on what you changed and why, plus the score envelopes from running it over the reference and every example if you have access to SolidWorks.
 
 ## First step: fetch the assets
 
@@ -27,7 +27,7 @@ This downloads every missing or checksum-mismatched asset into place. Nothing in
 See each task's `instruction.md` for the exact prompt.
 
 - **`8_mouse_wheel`** — a single-part task (`.SLDPRT`): edit a mouse shell to add symmetric snap-fit tabs between the shell halves, add two thumb buttons matching the design language, lengthen the mouse from 95 mm to 105 mm, and enlarge the scroll wheel radius by 10%.
-- **`13_nanoindenter_stage`** — an assembly task (`.SLDASM` with many component parts): add a low-profile, easily removable belt guard over the belt; remove the side plate and extend the fixture plate for M8 mounting screws; and replace the 40T GT2 pulley on the main shaft with a 60T GT2 pulley.
+- **`13_nanoindenter_stage`** — an assembly task (`.SLDASM` with many component parts): add a low-profile, easily removable belt guard over the belt; remove the side plate and extend the fixture plate for M8 mounting screws; and replace the 40T GT2 pulley on the stepper motor's shaft with a 60T GT2 pulley (the driven shaft's pulley stays 40T).
 
 ## Layout of a task
 
@@ -46,7 +46,7 @@ The harnesses import shared measurement/capture/scoring code from a `common/` pa
 
 ## The harness
 
-The harness grades **geometry only** (mass properties, centroids, face areas, and — for the assembly task — component placement), never feature or body names — candidates may remodel freely. It scores against the components declared in `task.toml` (`[[metadata.scoring_components]]`) and prints a JSON score envelope (`{"score", "max_score", "passed", "subscores"}`; see `common/harness_base.py`). The scoring components themselves are also yours to edit: if you split, merge, reweight, or add components while reworking a harness, update `[[metadata.scoring_components]]` in that task's `task.toml` to match — the two must stay in sync.
+The harness grades **geometry only** (mass properties, centroids, face areas, and — for the assembly task — component placement), never feature or body names — candidates may remodel freely. It scores a set of named components, each weighted, and prints a JSON score envelope (`{"score", "max_score", "passed", "subscores"}`; see `common/harness_base.py`). The components and their weights live in the harness and are yours to edit: split, merge, reweight, or add them as the rubric needs, keeping `max_score` in `task.toml` equal to their sum.
 
 To validate a harness, run it over the reference solution (should score full marks) and every entry in `examples/`.
 
@@ -56,10 +56,12 @@ SolidWorks cannot run headlessly or in a container: the harness drives a live, l
 
 ```bat
 cd SolidWorks\8_mouse_wheel
-python tests\task\harness\harness.py path\to\candidate.SLDPRT
+python tests\task\harness\harness.py solution\solution.SLDPRT
+python tests\task\harness\harness.py examples\adversarial_elliptical_wheel\adversarial_elliptical_wheel.SLDPRT
 ```
 
 ```bat
 cd SolidWorks\13_nanoindenter_stage
-python tests\task\harness\harness.py path\to\candidate\solution.SLDASM
+python tests\task\harness\harness.py solution\solution.SLDASM
+python tests\task\harness\harness.py examples\adversarial_m6_mounting_holes_instead_of_m8\adversarial_m6_mounting_holes_instead_of_m8.SLDASM
 ```

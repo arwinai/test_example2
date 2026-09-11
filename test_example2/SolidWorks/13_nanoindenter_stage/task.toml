@@ -21,50 +21,6 @@ accepted_output_formats = ["sldasm"]
 reference = ["solution/solution.SLDASM"]
 max_score = 10
 
-[[metadata.scoring_components]]
-name = "model rebuilds without errors"
-weight = 0
-
-[[metadata.scoring_components]]
-name = "belt cover covers both pulleys and the belt (incl. new pulley size)"
-weight = 1
-
-[[metadata.scoring_components]]
-name = "belt cover has mounting fasteners"
-weight = 1
-
-[[metadata.scoring_components]]
-name = "belt cover is sheet-metal manufacturable"
-weight = 1
-
-[[metadata.scoring_components]]
-name = "side plate removed"
-weight = 1
-
-[[metadata.scoring_components]]
-name = "fixture plate lengthened for t-slot mounting"
-weight = 1
-
-[[metadata.scoring_components]]
-name = "fixture plate has new M8 mounting holes or slots"
-weight = 1
-
-[[metadata.scoring_components]]
-name = "motor shaft pulley changed to 60T (larger diameter)"
-weight = 1
-
-[[metadata.scoring_components]]
-name = "pulley thickness and bore diameter unchanged"
-weight = 1
-
-[[metadata.scoring_components]]
-name = "pulley cover (flange) resized to fit the new pulley"
-weight = 1
-
-[[metadata.scoring_components]]
-name = "timing belt adjusted to the new pulley layout"
-weight = 1
-
 [metadata.harness]
 entrypoint = "harness/harness.py"
 timeout_s = 300.0

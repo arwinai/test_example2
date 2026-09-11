@@ -34,38 +34,6 @@ path = "tests/task/prompt/input.json"
 format = "json"
 role = "baseline_measurements"
 
-[[metadata.scoring_components]]
-name = "model regenerates"
-weight = 0
-
-[[metadata.scoring_components]]
-name = "no broken features"
-weight = 0
-
-[[metadata.scoring_components]]
-name = "four snap tabs present"
-weight = 1
-
-[[metadata.scoring_components]]
-name = "two thumb buttons added"
-weight = 1
-
-[[metadata.scoring_components]]
-name = "lengthened to 105 mm"
-weight = 1
-
-[[metadata.scoring_components]]
-name = "wheel radius up 10 percent"
-weight = 1
-
-[[metadata.scoring_components]]
-name = "slot accommodates wheel"
-weight = 1
-
-[[metadata.scoring_components]]
-name = "clean rebuild"
-weight = 0
-
 [metadata.examples]
 "examples/adversarial_elliptical_wheel/adversarial_elliptical_wheel.SLDPRT" = "elliptical wheel instead of round"
 "examples/adversarial_feature_tree_errors/adversarial_feature_tree_errors.SLDPRT" = "feature tree riddled with rebuild errors"
