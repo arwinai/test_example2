@@ -2,6 +2,15 @@
 
 A test RL environment containing two SolidWorks CAD tasks: `SolidWorks/8_mouse_wheel` and `SolidWorks/13_nanoindenter_stage`. The goal of this repo is to **update — and potentially completely rewrite — the currently AI-generated grading harnesses** for these tasks: the scripts that score a candidate part/assembly against each task's rubric. The current harnesses at `tests/task/harness/harness.py` are the starting point, not a fixed reference; treat them as replaceable so long as the grading contract below is honored.
 
+## Deliverable
+
+A grading harness for each task, implemented appropriately for that task, that:
+
+- **passes the reference**: `solution/solution.SLDPRT` (mouse) and `solution/solution.SLDASM` (stage) score full marks;
+- **fails the adversarials**: every entry under `examples/` loses points on the component(s) it actually gets wrong, and only those.
+
+"Implemented appropriately" means the harness grades the geometry the instruction asks for, not names, feature-tree structure, or coincidences of the reference file, so that a candidate who solves the task a different way still scores full marks. Keep `[[metadata.scoring_components]]` in each `task.toml` in sync with whatever components your harness emits, and include a short note on what you changed and why, plus the score envelopes from running it over the reference and every example if you have access to SolidWorks.
+
 ## First step: fetch the assets
 
 The (very) large SolidWorks files (input models, solutions, examples) live in Azure Blob Storage, not git — the checkout only has their URLs and checksums in each `task.toml`. Before doing anything else, run:
