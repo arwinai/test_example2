@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# macOS
+.DS_Store
+
+# CAD binaries live in Azure blob storage (see tools/fetch.py)
+*.SLDPRT
+*.sldprt
+*.SLDASM
+*.sldasm
+*.STEP
+*.step
+
+# SolidWorks lock files
+~$*.SLDPRT
+~$*.SLDASM
